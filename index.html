@@ -1,0 +1,2754 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>E-Raport Qu</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    // Konfigurasi Tailwind Custom untuk Warna Tema Dinamis
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { 
+            primary: 'var(--color-primary)', 
+            primaryHover: 'var(--color-primary-hover)', 
+            primaryLight: 'var(--color-primary-light)' 
+          },
+          animation: {
+            'slide-down': 'slideDown 0.4s ease-out forwards',
+            'slide-up': 'slideUp 0.4s ease-out forwards',
+            'bounce-slow': 'bounce 2s infinite',
+          },
+          keyframes: {
+            slideDown: {
+              '0%': { transform: 'translateY(-20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- PWA Injector & Blogger Fixer -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // 1. Memaksa elemen #root keluar dari wrapper Blogger ke body langsung
+      const rootEl = document.getElementById('root');
+      if (rootEl && rootEl.parentElement !== document.body) {
+        document.body.appendChild(rootEl);
+      }
+
+      // 2. Inject Manifest via Data URI (MENGGUNAKAN LOGO DINAMIS)
+      let iconUrl = "https://cdn-icons-png.flaticon.com/512/3135/3135810.png"; // Default
+      try {
+        const savedLogo = localStorage.getItem('savedSchoolLogo');
+        if (savedLogo) {
+          const srcMatch = savedLogo.match(/src\s*=\s*["']([^"']+)["']/);
+          if (srcMatch) iconUrl = srcMatch[1];
+          else if (savedLogo.trim().startsWith('http') || savedLogo.trim().startsWith('data:image')) iconUrl = savedLogo.trim();
+        }
+      } catch(e){}
+
+      const manifestJSON = {
+        "name": "E-Raport Qu",
+        "short_name": "E-Raport",
+        "start_url": location.href.split('?')[0],
+        "display": "standalone",
+        "background_color": "#0d5c3b",
+        "theme_color": "#0d5c3b",
+        "icons": [{
+          "src": iconUrl,
+          "sizes": "512x512",
+          "type": "image/png",
+          "purpose": "any maskable"
+        }]
+      };
+      
+      const manifestString = encodeURIComponent(JSON.stringify(manifestJSON));
+      const manifestURI = 'data:application/json;charset=utf-8,' + manifestString;
+      document.head.insertAdjacentHTML('beforeend', `<link rel="manifest" href="${manifestURI}">`);
+
+      // 3. Script Pembersih Navbar & Header Blogger secara paksa
+      const forceCleanBlogger = () => {
+        const junk = document.querySelectorAll('iframe[name="navbar"], #navbar-iframe, .Navbar, header, footer, #header, #sidebar, .sidebar-wrapper, .date-header, .post-title');
+        junk.forEach(el => el && el.remove());
+      };
+      forceCleanBlogger();
+      setTimeout(forceCleanBlogger, 1000); 
+    });
+  </script>
+
+  <style>
+    :root {
+      --color-primary: #0d5c3b;
+      --color-primary-hover: #064e3b;
+      --color-primary-light: #ecfdf5;
+    }
+    
+    html, body { 
+      margin: 0 !important; 
+      padding: 0 !important; 
+      width: 100vw !important; 
+      height: 100vh !important; 
+      overflow: hidden !important; 
+      background-color: #f8fafc !important; 
+    }
+    
+    #root {
+      display: block !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2147483647 !important; 
+      background-color: #f8fafc !important;
+    }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    .table-container { max-height: 60vh; overflow-y: auto; overflow-x: auto; scrollbar-width: thin; }
+    .table-container thead th { position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden m-0 p-0">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    window.isDemoAccount = false;
+
+    // --- PEMETAAN IKON ---
+    const Icon = ({ name, className, title, onClick }) => <i className={`fas ${name} ${className || ''}`} title={title} onClick={onClick}></i>;
+    const Home = (p) => <Icon name="fa-home" {...p} />;
+    const Users = (p) => <Icon name="fa-users" {...p} />;
+    const BookOpen = (p) => <Icon name="fa-book-open" {...p} />;
+    const Printer = (p) => <Icon name="fa-print" {...p} />;
+    const Settings = (p) => <Icon name="fa-cog" {...p} />;
+    const LogOut = (p) => <Icon name="fa-sign-out-alt" {...p} />;
+    const Search = (p) => <Icon name="fa-search" {...p} />;
+    const Plus = (p) => <Icon name="fa-plus" {...p} />;
+    const Save = (p) => <Icon name="fa-save" {...p} />;
+    const FileText = (p) => <Icon name="fa-file-alt" {...p} />;
+    const CheckCircle2 = (p) => <Icon name="fa-check-circle" {...p} />;
+    const Menu = (p) => <Icon name="fa-bars" {...p} />;
+    const FileSpreadsheet = (p) => <Icon name="fa-file-excel" {...p} />;
+    const Activity = (p) => <Icon name="fa-chart-line" {...p} />;
+    const Building = (p) => <Icon name="fa-building" {...p} />;
+    const Download = (p) => <Icon name="fa-download" {...p} />;
+    const ClipboardList = (p) => <Icon name="fa-clipboard-list" {...p} />;
+    const GraduationCap = (p) => <Icon name="fa-graduation-cap" {...p} />;
+    const LinkIcon = (p) => <Icon name="fa-link" {...p} />;
+    const RefreshCw = (p) => <Icon name="fa-sync-alt" {...p} />;
+    const ExternalLink = (p) => <Icon name="fa-external-link-alt" {...p} />;
+    const Trash2 = (p) => <Icon name="fa-trash-alt" {...p} />;
+    const PieChart = (p) => <Icon name="fa-chart-pie" {...p} />;
+    const Filter = (p) => <Icon name="fa-filter" {...p} />;
+    const FileBadge = (p) => <Icon name="fa-id-badge" {...p} />;
+    const Palette = (p) => <Icon name="fa-palette" {...p} />;
+    const UserIcon = (p) => <Icon name="fa-user-circle" {...p} />;
+    const Lock = (p) => <Icon name="fa-lock" {...p} />;
+    const Bullhorn = (p) => <Icon name="fa-bullhorn" {...p} />;
+    const Times = (p) => <Icon name="fa-times" {...p} />;
+
+    // === KONFIGURASI BACKEND GOOGLE APPS SCRIPT ===
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxbO2Fi5EnZFuNcbLdkhQAg4nXHv_Ob7pcv0MmI6ZbQeNd-TOR0fMIhAbJB78W1lqM/exec";
+
+    const syncToCloud = async (key, payload, tahunAjaran) => {
+      if (window.isDemoAccount) {
+        window.dispatchEvent(new CustomEvent('demo-toast', { detail: "Akun Demo Aktif: Anda hanya bisa membaca dan mencoba fitur. Data tidak disimpan ke Database." }));
+        return;
+      }
+      try {
+        const formattedTahunAjaran = tahunAjaran ? tahunAjaran.replace(/\//g, '_').replace(/ /g, '') : '2025_2026';
+        await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'save', key, payload, tahunAjaran: `Tahun_${formattedTahunAjaran}` })
+        });
+      } catch (error) { console.error(`[Cloud Sync Failed] Key: ${key}`, error); }
+    };
+
+    const cleanLogoUrl = (input) => {
+      if (!input) return '';
+      const srcMatch = input.match(/src\s*=\s*["']([^"']+)["']/);
+      if (srcMatch) return srcMatch[1];
+      return input.replace(/<[^>]*>?/gm, '').trim(); 
+    };
+
+    // UTILITY: DETEKSI FASE CERDAS
+    const extractClassNumber = (rombel) => {
+      if(!rombel) return 0;
+      const s = rombel.toString().toUpperCase().trim();
+      const match = s.match(/\d+/);
+      if(match) return parseInt(match[0]);
+      if(s.startsWith('XII')) return 12;
+      if(s.startsWith('XI')) return 11;
+      if(s.startsWith('X')) return 10;
+      if(s.startsWith('IX')) return 9;
+      if(s.startsWith('VIII')) return 8;
+      if(s.startsWith('VII')) return 7;
+      if(s.startsWith('VI')) return 6;
+      if(s.startsWith('IV')) return 4;
+      if(s.startsWith('V')) return 5;
+      if(s.startsWith('III')) return 3;
+      if(s.startsWith('II')) return 2;
+      if(s.startsWith('I')) return 1;
+      return 0;
+    };
+
+    const getFase = (rombel) => {
+      const num = extractClassNumber(rombel);
+      if(num >= 1 && num <= 2) return 'A';
+      if(num >= 3 && num <= 4) return 'B';
+      if(num >= 5 && num <= 6) return 'C';
+      if(num >= 7 && num <= 9) return 'D';
+      if(num === 10) return 'E';
+      if(num >= 11 && num <= 12) return 'F';
+      return '-';
+    };
+
+    const savedLogoData = localStorage.getItem('savedSchoolLogo') || '';
+    const INITIAL_PROFIL = { namaSekolah: '', npsn: '', kepalaSekolah: '', nip: '', semester: '1 (SATU)', tahunAjaran: '2025/2026', tanggalRaport: '', kecamatan: '', alamat: '', logo: savedLogoData, pengumuman: '' };
+    const INITIAL_TEMA = { colorTheme: 'hijau', adminPhoto: '', useWatermark: true, watermarkOpacity: 15, tableHeaderBg: '#d1d5db', tableHeaderTxt: '#000000' };
+    const INITIAL_TEACHERS = [];
+    const INITIAL_MAPEL = [];
+    const INITIAL_EKSKUL = [];
+    const DIMENSI_P5 = ['Keimanan dan ketaqwaan kepada Tuhan yang Maha Esa', 'Kewargaan', 'Penalaran kritis', 'Kreativitas', 'Kolaborasi', 'Kemandirian', 'Kesehatan', 'Komunikasi'];
+    const INITIAL_KKM = { kkm: 70, batasA: 90, batasB: 80, batasC: 70 };
+    const KOKU_LEVELS = ['Berkembang', 'Cakap', 'Mahir'];
+    const KOKU_BENTUK = ['Lintas Disiplin Ilmu', 'Gerakan 7 Kebiasaan Anak Indonesia Hebat', 'Cara Lainnya'];
+    const KOKU_JENJANG = ['PAUD', 'SD', 'SMP', 'SMA', 'SMK'];
+    const DEFAULT_KOKU_CONFIG = {
+      bentuk: 'Lintas Disiplin Ilmu',
+      tema: '',
+      judul: '',
+      jenjang: 'SD',
+      dimensi: [DIMENSI_P5[0], DIMENSI_P5[5], DIMENSI_P5[3]]
+    };
+    const KOKU_BANK = {
+      'Keimanan dan ketaqwaan kepada Tuhan yang Maha Esa': {
+        Berkembang: 'mengenal ajaran Tuhan Yang Maha Esa melalui cerita, doa, dan praktik ibadah sesuai agamanya serta mulai memahami nilai kebaikan dalam kehidupan nyata',
+        Cakap: 'membiasakan diri melaksanakan ajaran Tuhan Yang Maha Esa dalam kehidupan nyata secara konsisten dengan bimbingan orang tua dan guru serta mampu mensyukurinya',
+        Mahir: 'melaksanakan ibadah secara mandiri sesuai ajaran Tuhan Yang Maha Esa secara konsisten serta menjadi contoh dalam sikap religius di sekolah dan keluarga'
+      },
+      Kewargaan: {
+        Berkembang: 'menunjukkan kesadaran atas aturan, norma, dan nilai sosial budaya yang berlaku di keluarga, satuan pendidikan, dan masyarakat',
+        Cakap: 'berperilaku sesuai aturan, norma, dan nilai sosial budaya yang berlaku di keluarga, satuan pendidikan, dan masyarakat dengan bimbingan',
+        Mahir: 'berperilaku sesuai aturan, norma, dan nilai sosial budaya yang berlaku secara mandiri serta mampu mengajak orang lain melakukan hal yang sama'
+      },
+      'Penalaran kritis': {
+        Berkembang: 'menyampaikan argumen sederhana, mengambil keputusan, dan menyelesaikan masalah sederhana dengan dukungan informasi yang masih perlu dibimbing',
+        Cakap: 'menyampaikan argumen logis secara runtut, mengambil keputusan berdasarkan informasi yang relevan, dan menghasilkan solusi yang tepat sesuai konteks',
+        Mahir: 'menyampaikan argumen logis didukung data, membuat keputusan dengan mempertimbangkan dampak, dan menyelesaikan masalah secara mandiri'
+      },
+      Kreativitas: {
+        Berkembang: 'menyampaikan gagasan sederhana dan menemukan solusi masalah di lingkungan sekitar dengan bantuan orang dewasa',
+        Cakap: 'mengembangkan gagasan kreatif, menemukan solusi alternatif, dan membuat karya sesuai minat serta kebutuhan belajar',
+        Mahir: 'menghasilkan gagasan dan karya kreatif yang lebih kompleks serta mampu mengevaluasi dampak dan risikonya'
+      },
+      Kolaborasi: {
+        Berkembang: 'mulai menunjukkan kepedulian, berbagi, dan bekerja sama dengan teman sebaya serta anggota keluarga dengan bimbingan',
+        Cakap: 'menunjukkan kepedulian, berbagi sumber daya dan gagasan, serta bekerja sama secara konsisten untuk tujuan bersama',
+        Mahir: 'mengambil inisiatif untuk peduli, berbagi, dan bekerja sama dengan berbagai pihak untuk meningkatkan kualitas bersama'
+      },
+      Kemandirian: {
+        Berkembang: 'melakukan upaya mencapai tujuan pembelajaran sesuai arahan dan menjalankan peran yang diberikan dengan bimbingan penuh',
+        Cakap: 'berlatih menetapkan tujuan pembelajaran, menjalankan peran, dan mengembangkan potensi diri dengan bimbingan',
+        Mahir: 'mencapai target pembelajaran secara tuntas, menjalankan peran secara mandiri, dan mengaktualisasi rencana pengembangan diri'
+      },
+      Kesehatan: {
+        Berkembang: 'berperilaku hidup bersih dan sehat serta menjaga kebugaran fisik, mental, dan lingkungan dengan bimbingan',
+        Cakap: 'berperilaku hidup bersih dan sehat, menjaga kebugaran, serta berperan aktif meningkatkan kesehatan lingkungan',
+        Mahir: 'mengajak orang lain hidup bersih dan sehat, menjaga kebugaran, serta berkontribusi dalam peningkatan kesehatan lingkungan'
+      },
+      Komunikasi: {
+        Berkembang: 'menyimak, berbicara, membaca, dan menulis informasi sederhana namun masih perlu ketepatan dan kelancaran',
+        Cakap: 'menyimak, menyampaikan, membaca, dan menulis berbagai informasi dengan cukup tepat, lancar, dan efektif',
+        Mahir: 'mengolah dan menyampaikan informasi lisan maupun tertulis secara benar, tepat, lancar, efektif, dan kritis'
+      }
+    };
+
+    const COLOR_THEMES = {
+      hijau: { primary: '#0d5c3b', primaryHover: '#064e3b', primaryLight: '#ecfdf5' },
+      biru: { primary: '#1d4ed8', primaryHover: '#1e3a8a', primaryLight: '#eff6ff' },
+      ungu: { primary: '#6d28d9', primaryHover: '#4c1d95', primaryLight: '#f5f3ff' },
+      merah: { primary: '#e11d48', primaryHover: '#9f1239', primaryLight: '#fff1f2' }
+    };
+
+    const toProperCase = (str) => {
+      if (!str) return '';
+      return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+    };
+
+    function parseCSV(str) {
+      const arr = []; let quote = false;
+      for (let row = 0, col = 0, c = 0; c < str.length; c++) {
+          let cc = str[c], nc = str[c+1];
+          arr[row] = arr[row] || []; arr[row][col] = arr[row][col] || '';
+          if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+          if (cc === '"') { quote = !quote; continue; }
+          if (cc === ',' && !quote) { ++col; continue; }
+          if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
+          if (cc === '\n' && !quote) { ++row; col = 0; continue; }
+          if (cc === '\r' && !quote) { ++row; col = 0; continue; }
+          arr[row][col] += cc;
+      }
+      return arr;
+    }
+
+    const stripMateriPrefix = (val) => (val || '').toString().replace(/^\[(TP|LM)\]\s*/, '').trim();
+    const isLingkupMateri = (val) => /^\[LM\]/.test((val || '').toString().trim());
+    const isTujuanPembelajaran = (val) => stripMateriPrefix(val) !== '' && !isLingkupMateri(val);
+    const padArray = (arr, length = 7) => {
+      const next = Array.isArray(arr) ? arr.slice(0, length) : [];
+      while (next.length < length) next.push('');
+      return next;
+    };
+    const formatDash = (val) => {
+      if (val === null || val === undefined) return '-';
+      const text = String(val).trim();
+      return text === '' || text === '0' ? '-' : text;
+    };
+    const getKokuDescription = (dimensi, level, jenjang) => {
+      const safeLevel = KOKU_LEVELS.includes(level) ? level : 'Cakap';
+      const base = (KOKU_BANK[dimensi] && KOKU_BANK[dimensi][safeLevel]) || '';
+      const jenjangText = jenjang ? ` pada jenjang ${jenjang}` : '';
+      return base ? `Ananda ${base}${jenjangText}.` : '-';
+    };
+
+    // --- KOMPONEN UTAMA (App) ---
+    function App() {
+      const [user, setUser] = useState(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem('eraportSession') || 'null');
+          if (saved && saved.role && saved.username) {
+            window.isDemoAccount = !!saved.isDemo;
+            return saved;
+          }
+        } catch(e) {}
+        return null;
+      }); 
+      const [activeMenu, setActiveMenu] = useState('dashboard');
+      const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+      const [toastMessage, setToastMessage] = useState(null);
+      
+      const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+      const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+      const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+      const [profilSekolah, setProfilSekolah] = useState(INITIAL_PROFIL);
+      const [temaConfig, setTemaConfig] = useState(INITIAL_TEMA);
+      const [guruProfil, setGuruProfil] = useState({});
+      const [teachers, setTeachers] = useState(INITIAL_TEACHERS);
+      const [mapelList, setMapelList] = useState(INITIAL_MAPEL);
+      const [ekskulList, setEkskulList] = useState(INITIAL_EKSKUL);
+      const [allStudents, setAllStudents] = useState([]); 
+      
+      const [materiGuru, setMateriGuru] = useState({}); 
+      const [lingkupMateriGuru, setLingkupMateriGuru] = useState({});
+      const [studentGrades, setStudentGrades] = useState({}); 
+      const [absensi, setAbsensi] = useState({}); 
+      const [ekskulData, setEkskulData] = useState({}); 
+      const [kokuData, setKokuData] = useState({}); 
+      const [guruMapelConfig, setGuruMapelConfig] = useState({}); 
+      const [guruRombelConfig, setGuruRombelConfig] = useState({}); 
+      const [dimensiTarget, setDimensiTarget] = useState([DIMENSI_P5[0], DIMENSI_P5[5], DIMENSI_P5[3]]);
+      const [kkmConfig, setKkmConfig] = useState(INITIAL_KKM);
+
+      const [confirmDialog, setConfirmDialog] = useState(null);
+
+      // --- SISTEM ANTI REFRESH / BACK BUTTON ---
+      useEffect(() => {
+        const pushState = () => window.history.pushState(null, "", window.location.href);
+        pushState(); // Set state awal
+
+        const handlePopState = () => {
+          pushState(); // Kembalikan state segera agar tidak berpindah
+          showToast("Aksi Kembali (Back) dinonaktifkan. Gunakan menu aplikasi untuk navigasi.");
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+      }, []);
+
+      useEffect(() => {
+         const t = COLOR_THEMES[temaConfig.colorTheme] || COLOR_THEMES.hijau;
+         document.documentElement.style.setProperty('--color-primary', t.primary);
+         document.documentElement.style.setProperty('--color-primary-hover', t.primaryHover);
+         document.documentElement.style.setProperty('--color-primary-light', t.primaryLight);
+      }, [temaConfig.colorTheme]);
+
+      useEffect(() => {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          setDeferredPrompt(e);
+        });
+      }, []);
+
+      const triggerInstall = async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') setDeferredPrompt(null);
+        } else {
+          setShowInstallPrompt(true);
+        }
+      };
+
+      useEffect(() => {
+        const handleDemoToast = (e) => showToast(e.detail);
+        window.addEventListener('demo-toast', handleDemoToast);
+
+        const fetchInitialData = async () => {
+          try {
+            const activeYear = localStorage.getItem('activeTahunAjaran') || '2025_2026';
+            const res = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'loadAll', tahunAjaran: `Tahun_${activeYear}` })
+            });
+            const json = await res.json();
+            
+            if (json.status === 'success' && json.data) {
+              if (json.data.profil) {
+                 setProfilSekolah(json.data.profil);
+                 if(json.data.profil.logo) localStorage.setItem('savedSchoolLogo', json.data.profil.logo); 
+              }
+              if (json.data.temaConfig) setTemaConfig(json.data.temaConfig);
+              if (json.data.guruProfil) setGuruProfil(json.data.guruProfil);
+              if (json.data.teachers) setTeachers(json.data.teachers);
+              if (json.data.mapel) setMapelList(json.data.mapel);
+              if (json.data.ekskul) setEkskulList(json.data.ekskul);
+              if (json.data.allStudents) setAllStudents(json.data.allStudents);
+              if (json.data.materiGuru) setMateriGuru(json.data.materiGuru);
+              if (json.data.lingkupMateriGuru) setLingkupMateriGuru(json.data.lingkupMateriGuru);
+              if (json.data.studentGrades) setStudentGrades(json.data.studentGrades);
+              if (json.data.absensi) setAbsensi(json.data.absensi);
+              if (json.data.ekskulData) setEkskulData(json.data.ekskulData);
+              if (json.data.kokuData) setKokuData(json.data.kokuData);
+              if (json.data.guruMapelConfig) setGuruMapelConfig(json.data.guruMapelConfig);
+              if (json.data.guruRombelConfig) setGuruRombelConfig(json.data.guruRombelConfig);
+              if (json.data.dimensiTarget) setDimensiTarget(json.data.dimensiTarget);
+              if (json.data.kkmConfig) setKkmConfig(json.data.kkmConfig);
+            }
+          } catch (e) {
+            console.error("Gagal load initial data", e);
+          }
+        };
+        fetchInitialData();
+
+        return () => window.removeEventListener('demo-toast', handleDemoToast);
+      }, []);
+
+      const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 4000);
+      };
+
+      const showConfirm = (message, onConfirm) => {
+        setConfirmDialog({ message, onConfirm });
+      };
+
+      const handleLogin = (role, nama, username) => {
+        const sessionUser = { role, name: nama || (role === 'admin' ? (profilSekolah.kepalaSekolah || 'Admin Kepala Sekolah') : 'Guru'), username, isDemo: window.isDemoAccount };
+        setUser(sessionUser);
+        localStorage.setItem('eraportSession', JSON.stringify(sessionUser));
+        setActiveMenu('dashboard');
+      };
+
+      const handleLogout = () => {
+        localStorage.removeItem('eraportSession');
+        window.isDemoAccount = false;
+        setUser(null);
+        setActiveMenu('dashboard');
+      };
+
+      const currentRombel = user?.role !== 'admin' ? guruRombelConfig[user?.username] : null;
+
+      // Akses Data Siswa Lintas Guru (Semua Guru Bisa Lihat Sesuai Rombel yang Dipilih)
+      const students = useMemo(() => {
+        if (!user) return [];
+        if (user.role === 'admin') return allStudents;
+        if (!currentRombel) return [];
+        return allStudents.filter(s => s.rombelSD === currentRombel);
+      }, [user, allStudents, currentRombel]);
+
+      const activeMapelList = user?.role === 'admin' 
+        ? mapelList 
+        : (currentRombel && guruMapelConfig[`${user.username}_${currentRombel}`] && guruMapelConfig[`${user.username}_${currentRombel}`].length > 0 
+            ? guruMapelConfig[`${user.username}_${currentRombel}`] 
+            : (guruMapelConfig[user?.username] || mapelList));
+
+      const calculateNA = (mapel, studentId, mg = materiGuru, sg = studentGrades) => {
+        const s = allStudents.find(x => x.id === studentId);
+        const rombel = s ? s.rombelSD : '';
+        const materiKey = rombel ? `${rombel}_${mapel}` : mapel;
+        const materi = (mg[materiKey] || mg[mapel] || []).filter(isTujuanPembelajaran);
+        
+        const scores = (sg[mapel] || {})[studentId] || {};
+        let totalM = 0, countM = 0;
+        materi.forEach((m, idx) => {
+          if(m.trim() !== '' && scores[`m${idx}`] !== undefined && scores[`m${idx}`] !== null) {
+             totalM += scores[`m${idx}`]; countM++;
+          }
+        });
+        if (countM === 0 && (scores.sts === undefined || scores.sts === null) && (scores.sas === undefined || scores.sas === null)) return null;
+        const rataM = countM > 0 ? totalM / countM : 0;
+        return parseFloat((((rataM) + (scores.sts||0) + (scores.sas||0)) / (countM > 0 ? 3 : ((scores.sts!==undefined&&scores.sts!==null) && (scores.sas!==undefined&&scores.sas!==null) ? 2 : 1))).toFixed(2));
+      };
+
+      const getPredikat = (nilai, config = kkmConfig) => {
+        if(nilai === null || nilai === undefined || isNaN(nilai)) return '-';
+        const n = parseFloat(nilai);
+        if(n >= config.batasA) return 'A';
+        if(n >= config.batasB) return 'B';
+        if(n >= config.batasC) return 'C';
+        return 'D';
+      };
+
+      const activeContext = { profil: profilSekolah, temaConfig, guruProfil, teachers, mapel: mapelList, ekskul: ekskulList, allStudents, materiGuru, lingkupMateriGuru, studentGrades, absensi, ekskulData, kokuData, guruMapelConfig, dimensiTarget, kkmConfig };
+
+      if (!user) return (
+        <div className="fixed inset-0 w-screen h-screen m-0 p-0 overflow-hidden z-[2147483647] bg-slate-50">
+          <LoginScreen onLogin={handleLogin} teachers={teachers} profil={profilSekolah} temaConfig={temaConfig} onInstallClick={triggerInstall} />
+        </div>
+      );
+
+      const renderContent = () => {
+        const requireRombelMenus = ['pengaturan_mapel', 'input_materi', 'input_nilai', 'input_absensi', 'input_ekskul', 'input_koku', 'leger', 'cetak_rapor', 'cetak_sampul'];
+        
+        if (user.role === 'guru' && requireRombelMenus.includes(activeMenu) && !currentRombel) {
+           return (
+             <div className="flex flex-col items-center justify-center p-8 sm:p-16 bg-white/90 backdrop-blur-sm rounded-[2rem] shadow-sm border border-red-100 max-w-xl mx-auto mt-10 text-center animate-slide-down">
+                <div className="w-24 h-24 bg-red-50 text-red-500 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner"><Lock className="text-5xl" /></div>
+                <h2 className="text-2xl font-black text-slate-800 mb-3 tracking-tight">Akses Menu Terkunci!</h2>
+                <p className="text-slate-500 font-medium mb-8 leading-relaxed">Anda harus memilih dan mengunci Kelas (Rombel) yang Anda ampu terlebih dahulu agar sistem dapat menyiapkan data siswa dan mata pelajaran yang tepat.</p>
+                <button onClick={() => setActiveMenu('tarik_siswa')} className="bg-primary hover:bg-primaryHover text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl flex items-center gap-3 transition-all">
+                  Pergi ke Menu Pilih Kelas <ExternalLink/>
+                </button>
+             </div>
+           );
+        }
+
+        if (user.role === 'admin') {
+          switch (activeMenu) {
+            case 'dashboard': return <AdminDashboard teachers={teachers} students={allStudents} />;
+            case 'pengumuman': return <AdminPengumuman profil={profilSekolah} setProfil={setProfilSekolah} showToast={showToast} />;
+            case 'data_guru': return <AdminDataGuru teachers={teachers} setTeachers={setTeachers} profil={profilSekolah} showToast={showToast} showConfirm={showConfirm} />;
+            case 'master_mapel': return <AdminMasterMapel mapel={mapelList} setMapel={setMapelList} ekskul={ekskulList} setEkskul={setEkskulList} profil={profilSekolah} showToast={showToast} />;
+            case 'kkm_nilai': return <AdminKKM kkmConfig={kkmConfig} setKkmConfig={setKkmConfig} profil={profilSekolah} showToast={showToast} />;
+            case 'data_siswa': return <AdminDataSiswa allStudents={allStudents} setAllStudents={setAllStudents} profil={profilSekolah} showToast={showToast} />;
+            case 'profil': return <AdminProfil profil={profilSekolah} setProfil={setProfilSekolah} showToast={showToast} />;
+            case 'pengaturan_tema': return <AdminPengaturanTema temaConfig={temaConfig} setTemaConfig={setTemaConfig} profil={profilSekolah} showToast={showToast} />;
+            case 'progress_guru': return <AdminProgressGuru teachers={teachers} students={allStudents} mapelList={mapelList} studentGrades={studentGrades} materiGuru={materiGuru} calculateNA={calculateNA} />;
+            case 'leger_admin': return <AdminPrintFilter defaultContext={activeContext} showToast={showToast} renderComponent={(filtered, rombel, waliName, ctx, printProfil) => <GuruLeger students={filtered} mapelList={ctx.mapel} calculateNA={(m, id) => calculateNA(m, id, ctx.materiGuru, ctx.studentGrades)} profil={printProfil} waliKelasName={waliName} showToast={showToast} />} />;
+            case 'cetak_rapor_admin': return <AdminPrintFilter defaultContext={activeContext} showToast={showToast} renderComponent={(filtered, rombel, waliName, ctx, printProfil) => <GuruCetakRapor students={filtered} mapelList={ctx.mapel} calculateNA={(m, id) => calculateNA(m, id, ctx.materiGuru, ctx.studentGrades)} profil={printProfil} waliKelasName={waliName} waliKelasNip={(ctx.teachers.find(t => t.waliKelas === rombel) || {}).nip} kokuData={ctx.kokuData} dimensiTarget={ctx.dimensiTarget} ekskulList={ctx.ekskul} ekskulData={ctx.ekskulData} absensi={ctx.absensi} materiGuru={ctx.materiGuru} studentGrades={ctx.studentGrades} kkmConfig={ctx.kkmConfig} temaConfig={ctx.temaConfig} showToast={showToast} allStudents={ctx.allStudents} />} />;
+            case 'cetak_sampul_admin': return <AdminPrintFilter defaultContext={activeContext} showToast={showToast} renderComponent={(filtered, rombel, waliName, ctx, printProfil) => <GuruCetakSampul students={filtered} profil={printProfil} showToast={showToast} />} />;
+            default: return <AdminDashboard teachers={teachers} students={allStudents} />;
+          }
+        } else {
+          switch (activeMenu) {
+            case 'dashboard': return <GuruDashboard user={user} students={students} mapelList={activeMapelList} studentGrades={studentGrades} calculateNA={calculateNA} currentRombel={currentRombel} onInstallClick={triggerInstall} profil={profilSekolah} />;
+            case 'profil_guru': return <GuruProfil guruProfil={guruProfil} setGuruProfil={setGuruProfil} username={user.username} profil={profilSekolah} showToast={showToast} />;
+            case 'pengaturan_mapel': return <GuruPengaturanMapel mapelList={mapelList} activeMapelList={activeMapelList} setGuruMapelConfig={setGuruMapelConfig} username={user.username} currentRombel={currentRombel} profil={profilSekolah} showToast={showToast} />;
+            case 'tarik_siswa': return <GuruTarikSiswa allStudents={allStudents} guruRombelConfig={guruRombelConfig} setGuruRombelConfig={setGuruRombelConfig} username={user.username} profil={profilSekolah} showToast={showToast} />;
+            case 'input_materi': return <GuruInputMateri mapelList={activeMapelList} materiGuru={materiGuru} setMateriGuru={setMateriGuru} lingkupMateriGuru={lingkupMateriGuru} setLingkupMateriGuru={setLingkupMateriGuru} currentRombel={currentRombel} profil={profilSekolah} showToast={showToast} />;
+            case 'input_nilai': return <GuruInputNilai mapelList={activeMapelList} materiGuru={materiGuru} studentGrades={studentGrades} setStudentGrades={setStudentGrades} students={students} calculateNA={calculateNA} currentRombel={currentRombel} profil={profilSekolah} showToast={showToast} showConfirm={showConfirm} />;
+            case 'input_absensi': return <GuruInputAbsensi students={students} absensi={absensi} setAbsensi={setAbsensi} profil={profilSekolah} showToast={showToast} showConfirm={showConfirm} />;
+            case 'input_ekskul': return <GuruInputEkskul students={students} ekskulList={ekskulList} ekskulData={ekskulData} setEkskulData={setEkskulData} profil={profilSekolah} showToast={showToast} showConfirm={showConfirm} />;
+            case 'input_koku': return <GuruInputKoku students={students} kokuData={kokuData} setKokuData={setKokuData} dimensiTarget={dimensiTarget} setDimensiTarget={setDimensiTarget} currentRombel={currentRombel} profil={profilSekolah} showToast={showToast} showConfirm={showConfirm} />;
+            case 'leger': return <GuruLeger students={students} mapelList={activeMapelList} calculateNA={calculateNA} profil={profilSekolah} waliKelasName={user.name} showToast={showToast} />;
+            case 'cetak_rapor': return <GuruCetakRapor students={students} mapelList={activeMapelList} calculateNA={calculateNA} profil={profilSekolah} waliKelasName={user.name} waliKelasNip={(teachers.find(t => t.username === user.username || t.nama === user.name) || {}).nip} kokuData={kokuData} dimensiTarget={dimensiTarget} ekskulList={ekskulList} ekskulData={ekskulData} absensi={absensi} materiGuru={materiGuru} studentGrades={studentGrades} kkmConfig={kkmConfig} temaConfig={temaConfig} showToast={showToast} allStudents={allStudents} />;
+            case 'cetak_sampul': return <GuruCetakSampul students={students} profil={profilSekolah} showToast={showToast} />;
+            default: return <GuruDashboard user={user} students={students} mapelList={activeMapelList} studentGrades={studentGrades} calculateNA={calculateNA} currentRombel={currentRombel} onInstallClick={triggerInstall} profil={profilSekolah} />;
+          }
+        }
+      };
+
+      const currentMenus = user.role === 'admin' ? [
+        { id: 'dashboard', label: 'Dashboard', icon: <Home /> },
+        { id: 'pengumuman', label: 'Pengumuman Guru', icon: <Bullhorn /> },
+        { id: 'data_guru', label: 'Sinkron Guru (CSV)', icon: <Users /> },
+        { id: 'master_mapel', label: 'Master Mapel & Ekskul', icon: <BookOpen /> },
+        { id: 'kkm_nilai', label: 'KKM & Predikat', icon: <Settings /> },
+        { id: 'data_siswa', label: 'Sinkron Siswa (CSV)', icon: <FileSpreadsheet /> },
+        { id: 'profil', label: 'Profil Sekolah', icon: <Building /> },
+        { id: 'pengaturan_tema', label: 'Pengaturan Tema', icon: <Palette /> },
+        { id: 'progress_guru', label: 'Progress Pengisian', icon: <PieChart /> },
+        { id: 'leger_admin', label: 'Cetak Leger Global', icon: <FileSpreadsheet /> },
+        { id: 'cetak_rapor_admin', label: 'Cetak Rapor Global', icon: <Printer /> },
+        { id: 'cetak_sampul_admin', label: 'Cetak Sampul Global', icon: <FileBadge /> },
+      ] : [
+        { id: 'dashboard', label: 'Dashboard Guru', icon: <Home /> },
+        { id: 'profil_guru', label: 'Profil Guru', icon: <UserIcon /> },
+        { id: 'tarik_siswa', label: 'Pilih / Ganti Kelas', icon: <Download /> },
+        { id: 'pengaturan_mapel', label: 'Pilih Mapel Diampu', icon: <Filter /> },
+        { id: 'input_materi', label: 'Tujuan Pembelajaran', icon: <BookOpen /> },
+        { id: 'input_nilai', label: 'Input Nilai Akademik', icon: <FileText /> },
+        { id: 'input_absensi', label: 'Input Kehadiran', icon: <ClipboardList /> },
+        { id: 'input_ekskul', label: 'Nilai Ekstrakurikuler', icon: <Activity /> },
+        { id: 'input_koku', label: 'Nilai Kokurikuler', icon: <Users /> },
+        { id: 'leger', label: 'Cetak Leger Kelas', icon: <FileSpreadsheet /> },
+        { id: 'cetak_rapor', label: 'Cetak Rapor', icon: <Printer /> },
+        { id: 'cetak_sampul', label: 'Cetak Sampul Rapor', icon: <FileBadge /> },
+      ];
+
+      const userPhoto = user.role === 'admin' 
+        ? (temaConfig.adminPhoto ? cleanLogoUrl(temaConfig.adminPhoto) : null)
+        : (guruProfil[user.username]?.photo ? cleanLogoUrl(guruProfil[user.username].photo) : null);
+
+      return (
+        <div className="fixed inset-0 w-screen h-screen m-0 p-0 bg-slate-50 font-sans text-slate-800 flex overflow-hidden z-[2147483647]">
+          
+          {showInstallPrompt && (
+            <div className="fixed inset-0 z-[10000000] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-slide-down" onClick={() => setShowInstallPrompt(false)}>
+               <div className="bg-white rounded-[2rem] p-8 sm:p-10 max-w-lg w-full shadow-2xl text-center border-t-8 border-primary relative overflow-hidden flex flex-col items-center" onClick={e=>e.stopPropagation()}>
+                  <div className="w-20 h-20 bg-primaryLight text-primary rounded-3xl flex items-center justify-center text-4xl shadow-inner mb-6 animate-bounce-slow">
+                     <i className="fas fa-mobile-alt"></i>
+                  </div>
+                  <h3 className="font-black text-slate-800 text-2xl sm:text-3xl mb-4 tracking-tight">Instal Aplikasi di HP!</h3>
+                  <p className="text-slate-600 font-medium text-sm sm:text-base leading-relaxed mb-8">
+                     Untuk akses lebih cepat dan tampilan layar penuh, klik ikon <i className="fas fa-ellipsis-v mx-2 text-slate-800 bg-slate-100 px-2 py-1 rounded"></i> (Titik Tiga) di pojok kanan atas browser Chrome/Safari Anda, kemudian pilih opsi: <br/><br/>
+                     <span className="bg-primaryLight text-primaryHover font-extrabold px-4 py-2 rounded-xl text-lg block border border-primary/20">"Tambahkan ke Layar Utama" <br/> (Add to Home Screen)</span>
+                  </p>
+                  <button onClick={() => setShowInstallPrompt(false)} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-xl font-bold text-base transition-all shadow-sm">Tutup Panduan Ini</button>
+               </div>
+            </div>
+          )}
+
+          {isProfileModalOpen && userPhoto && (
+            <div className="fixed inset-0 z-[10000000] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-6 animate-slide-down" onClick={() => setIsProfileModalOpen(false)}>
+               <div className="bg-white p-2 rounded-[2rem] shadow-2xl relative max-w-sm w-full animate-slide-up" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setIsProfileModalOpen(false)} className="absolute -top-4 -right-4 bg-red-500 hover:bg-red-600 transition-colors text-white w-12 h-12 rounded-full text-xl font-bold shadow-xl flex items-center justify-center"><Times /></button>
+                  <img src={userPhoto} className="w-full h-auto rounded-[1.5rem] object-contain max-h-[70vh] bg-slate-100" alt="Zoom Profil" />
+                  <div className="text-center py-4">
+                     <h3 className="font-bold text-lg text-slate-800">{user.name}</h3>
+                     <p className="text-sm text-slate-500 font-medium capitalize">{user.role}</p>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {temaConfig.useWatermark && profilSekolah?.logo && (
+            <div className="absolute inset-0 z-[1] pointer-events-none flex items-center justify-center overflow-hidden mix-blend-multiply" style={{opacity: temaConfig.watermarkOpacity / 100}}>
+               <img src={cleanLogoUrl(profilSekolah.logo)} className="w-[80vw] md:w-[50vw] max-w-2xl object-contain" alt="Watermark" />
+            </div>
+          )}
+
+          {toastMessage && (
+            <div className="absolute top-6 right-6 z-[100] bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-down">
+              <CheckCircle2 className="text-xl text-primaryLight" />
+              <span className="font-bold text-sm tracking-wide">{toastMessage}</span>
+            </div>
+          )}
+
+          {confirmDialog && (
+            <div className="absolute inset-0 bg-slate-900/60 z-[1000] flex items-center justify-center p-4">
+              <div className="bg-white p-6 md:p-8 rounded-[2rem] max-w-sm w-full shadow-2xl relative z-10 animate-slide-down">
+                <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                  <Trash2 className="text-3xl"/>
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-800 mb-2 text-center">Konfirmasi Tindakan</h3>
+                <p className="text-slate-500 font-medium mb-8 text-center text-sm leading-relaxed">{confirmDialog.message}</p>
+                <div className="flex flex-col sm:flex-row justify-center gap-3">
+                  <button onClick={() => setConfirmDialog(null)} className="px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all w-full sm:w-auto">Batal</button>
+                  <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }} className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-md transition-all w-full sm:w-auto">Ya, Lanjutkan</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <aside className={`${isSidebarOpen ? 'w-64 border-r border-slate-800' : 'w-0 border-0'} overflow-hidden transition-all duration-300 absolute md:relative z-40 h-full bg-slate-900 text-white shadow-2xl flex flex-col shrink-0 left-0 top-0 bottom-0`}>
+            <div className="p-6 flex items-center gap-3 border-b border-slate-800 whitespace-nowrap min-w-[16rem]">
+              <div className="bg-primary p-2 rounded-xl shrink-0 w-10 h-10 flex items-center justify-center overflow-hidden bg-white">
+                {profilSekolah.logo ? (
+                   <img src={cleanLogoUrl(profilSekolah.logo)} className="w-full h-full object-contain" alt="Logo" />
+                ) : (
+                   <GraduationCap className="text-xl text-primary" />
+                )}
+              </div>
+              <div>
+                <span className="text-lg font-bold block leading-tight">E-Raport Qu</span>
+                <span className="text-xs text-primaryLight uppercase font-bold tracking-wider opacity-80">{user.role === 'admin' ? 'Admin / Kepsek' : 'Panel Guru'}</span>
+              </div>
+            </div>
+            <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto min-w-[16rem]" style={{scrollbarWidth: 'thin'}}>
+              {currentMenus.map(menu => (
+                <MenuButton key={menu.id} icon={menu.icon} label={menu.label} active={activeMenu === menu.id} onClick={() => { setActiveMenu(menu.id); if(window.innerWidth < 768) setIsSidebarOpen(false); }} />
+              ))}
+            </nav>
+            <div className="p-4 border-t border-slate-800 min-w-[16rem] bg-slate-900 text-center">
+              <button onClick={handleLogout} className="flex items-center justify-center w-full px-4 py-3 text-sm font-bold text-red-400 rounded-xl hover:bg-red-500/10 transition-colors mb-4">
+                <LogOut className="text-lg mr-3" /> Keluar Aplikasi
+              </button>
+              <div className="text-[10px] text-slate-500 font-bold tracking-wide leading-tight">
+                Version 1.0 by Amal Khairi, S.Pd., Gr.<br/>contact - 085260249230
+              </div>
+            </div>
+          </aside>
+
+          <main className="flex-1 flex flex-col w-full h-full relative bg-transparent z-10 overflow-hidden">
+            <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-8 z-20 shrink-0 shadow-sm relative w-full">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors outline-none">
+                  <Menu className="text-xl text-slate-700" />
+                </button>
+                <h1 className="text-lg font-bold text-slate-800 capitalize hidden sm:block tracking-tight">
+                  {currentMenus.find(m => m.id === activeMenu)?.label}
+                </h1>
+              </div>
+              <div className="flex items-center gap-3 p-1.5 hover:bg-slate-50 rounded-xl transition-colors border border-transparent">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-bold text-slate-800 leading-none mb-1">{user.name}</p>
+                  <p className="text-xs text-primary font-bold leading-none capitalize">{user.role} {window.isDemoAccount && <span className="text-red-500 ml-1">(Demo)</span>}</p>
+                </div>
+                {userPhoto ? (
+                  <img onClick={() => setIsProfileModalOpen(true)} src={userPhoto} alt="Profil" className="w-10 h-10 rounded-full object-cover shadow-sm border-2 border-primaryLight cursor-pointer hover:opacity-80 transition-opacity" title="Klik untuk memperbesar foto" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-primaryHover text-white font-bold flex justify-center items-center shadow-md shrink-0 cursor-pointer" onClick={() => showToast("Anda belum mengatur Foto Profil")}>
+                    {user.name.charAt(0)}
+                  </div>
+                )}
+              </div>
+            </header>
+            
+            {/* PAD Bawah ditambahkan (pb-32) untuk scroll HP yang tertutup */}
+            <div className="flex-1 overflow-y-auto p-2 sm:p-6 lg:p-8 pb-32 relative w-full h-full" style={{ scrollbarWidth: 'thin' }}>
+              <div className="max-w-7xl mx-auto relative h-full">
+                {renderContent()}
+              </div>
+            </div>
+          </main>
+          
+          {isSidebarOpen && <div className="absolute inset-0 bg-slate-900/60 z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
+        </div>
+      );
+    }
+
+    // --- KOMPONEN PENDUKUNG ---
+
+    function LoginScreen({ onLogin, teachers, profil, temaConfig, onInstallClick }) {
+      const [idAkses, setIdAkses] = useState('');
+      const [errorMsg, setErrorMsg] = useState('');
+      const [imgError, setImgError] = useState(false);
+
+      const handleSubmit = () => {
+        const inputVal = idAkses.trim().toLowerCase();
+        if (inputVal === 'demo_admin') {
+          window.isDemoAccount = true;
+          onLogin('admin', 'Kepsek Demo', 'demo_admin');
+        } else if (inputVal === 'demo_guru') {
+          window.isDemoAccount = true;
+          onLogin('guru', 'Wali Kelas Demo', 'demo_guru');
+        } else if (inputVal === 'admin') {
+          window.isDemoAccount = false;
+          onLogin('admin', profil.kepalaSekolah || 'Admin', 'admin');
+        } else {
+          // Memungkinkan pencarian Nama dan Username (Case Insensitive)
+          const guru = teachers.find(t => t.username.toLowerCase() === inputVal || t.nama.toLowerCase().includes(inputVal));
+          if (guru) {
+             window.isDemoAccount = false;
+             onLogin('guru', guru.nama, guru.username);
+          }
+          else {
+             setErrorMsg('Nama/Username tidak terdaftar di sistem. Hubungi Admin.');
+          }
+        }
+      };
+
+      const handleKeyDown = (e) => {
+         if (e.key === 'Enter') handleSubmit();
+      };
+
+      return (
+        <div className="w-full h-full min-h-screen bg-slate-100 flex items-center justify-center p-4 relative overflow-hidden font-sans flex-col">
+          <div className="absolute top-4 right-4 z-20">
+             <button onClick={onInstallClick} className="bg-white/80 backdrop-blur border border-slate-200 text-primaryHover px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-md flex items-center gap-2 hover:bg-primary hover:text-white transition-all">
+                <Download className="text-sm"/> Instal Aplikasi
+             </button>
+          </div>
+
+          {temaConfig?.useWatermark && profil?.logo && (
+            <div className="absolute inset-0 z-[1] pointer-events-none flex items-center justify-center overflow-hidden mix-blend-multiply" style={{opacity: temaConfig.watermarkOpacity / 100}}>
+               <img src={cleanLogoUrl(profil.logo)} className="w-[80vw] md:w-[60vw] max-w-2xl object-contain" alt="Watermark" />
+            </div>
+          )}
+
+          <div className="absolute top-0 left-0 w-full h-96 bg-primary rounded-b-[100px] transform -translate-y-20 shadow-2xl z-0 transition-colors duration-500"></div>
+          
+          <div className="bg-white/95 backdrop-blur-sm p-8 sm:p-12 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 border border-slate-100">
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-24 h-24 bg-primaryLight rounded-3xl flex items-center justify-center mb-4 overflow-hidden border-4 border-white shadow-md">
+                {profil.logo && !imgError ? (
+                  <img src={cleanLogoUrl(profil.logo)} alt="Logo" className="w-full h-full object-contain p-2" onError={() => setImgError(true)} />
+                ) : (
+                  <GraduationCap className="text-4xl text-primary" />
+                )}
+              </div>
+              <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">E-Raport Qu</h1>
+              <p className="text-slate-500 font-medium mt-2 text-center text-sm leading-relaxed">
+                 {profil.namaSekolah || 'Akses Sistem (Admin: admin)'}
+              </p>
+            </div>
+            
+            {errorMsg && <div className="bg-red-50 text-red-600 font-bold text-sm p-4 rounded-xl mb-6 text-center border border-red-100 animate-slide-down">{errorMsg}</div>}
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-2 ml-1">Masukkan Username / Nama Anda :</label>
+                <input 
+                  type="text" 
+                  autoComplete="off" 
+                  spellCheck="false"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-primary outline-none transition-all text-center text-lg tracking-wide text-primaryHover" 
+                  placeholder="Ketik nama Anda..." 
+                  value={idAkses} 
+                  onChange={e=>setIdAkses(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              </div>
+              
+              <button onClick={handleSubmit} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-[0.98] text-lg">Masuk Sistem</button>
+            </div>
+            
+            <div className="text-center mt-6 text-[10px] text-slate-400 font-bold leading-tight">
+               <p>Version 1.0 by Amal Khairi, S.Pd., Gr.</p>
+               <p>contact - 085260249230</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function MenuButton({ icon, label, active, onClick }) {
+      return (
+        <button onClick={onClick} className={`flex items-center w-full px-4 py-3 text-sm font-bold rounded-xl whitespace-nowrap overflow-hidden transition-all ${active ? 'bg-primary text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+          <span className={`mr-3 shrink-0 ${active ? 'text-primaryLight' : 'text-slate-500'}`}>{React.cloneElement(icon, { className: 'text-lg w-5' })}</span>
+          {label}
+        </button>
+      );
+    }
+
+    // --- ADMIN SCREENS ---
+
+    function AdminDashboard({ teachers, students }) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-slate-900 rounded-[2rem] p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
+            <div className="relative z-10">
+              <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 tracking-tight">Panel Kepala Sekolah</h2>
+              <p className="text-slate-400 font-medium max-w-xl text-sm sm:text-base">Kelola data induk sekolah, konfigurasi mata pelajaran, manajemen akun guru, dan cetak rapor keseluruhan.</p>
+            </div>
+            <Building className="absolute -right-10 -bottom-10 text-[12rem] sm:text-[16rem] text-slate-800 opacity-50 transform -rotate-12 pointer-events-none" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl border border-slate-100 flex items-center gap-5 shadow-sm">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0"><Users className="text-2xl" /></div>
+              <div><p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">Total Guru</p><h4 className="text-2xl sm:text-3xl font-black text-slate-800">{teachers.length}</h4></div>
+            </div>
+            <div className="bg-white/90 backdrop-blur-sm p-6 rounded-3xl border border-slate-100 flex items-center gap-5 shadow-sm">
+              <div className="w-16 h-16 bg-primaryLight text-primary rounded-2xl flex items-center justify-center shrink-0"><GraduationCap className="text-2xl" /></div>
+              <div><p className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">Total Siswa Induk</p><h4 className="text-2xl sm:text-3xl font-black text-slate-800">{students.length}</h4></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminPengumuman({ profil, setProfil, showToast }) {
+       const [pesan, setPesan] = useState(profil.pengumuman || '');
+       const handleSave = () => {
+          const updated = {...profil, pengumuman: pesan};
+          setProfil(updated);
+          syncToCloud('profil', updated, profil.tahunAjaran);
+          showToast('Pengumuman berhasil dikirim ke seluruh Guru!');
+       };
+       const handleClear = () => {
+          setPesan('');
+          const updated = {...profil, pengumuman: ''};
+          setProfil(updated);
+          syncToCloud('profil', updated, profil.tahunAjaran);
+          showToast('Pengumuman berhasil ditarik/dihapus!');
+       };
+       return (
+         <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 max-w-3xl">
+            <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+               <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0"><Bullhorn className="text-2xl" /></div>
+               <div>
+                  <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Kirim Pengumuman Instansi</h2>
+                  <p className="text-slate-500 font-medium text-xs sm:text-sm">Pesan yang ditulis di sini akan muncul sebagai peringatan di bagian atas layar Dashboard semua guru.</p>
+               </div>
+            </div>
+            <textarea rows="5" className="w-full p-4 bg-amber-50/30 border border-amber-200 rounded-xl text-sm sm:text-base font-medium text-slate-800 outline-none focus:ring-2 focus:ring-amber-500 mb-6 placeholder:text-amber-300" placeholder="Contoh: Yth Bapak/Ibu Guru, mohon segera menyelesaikan pengisian Nilai..." value={pesan} onChange={e=>setPesan(e.target.value)}></textarea>
+            <div className="flex flex-col sm:flex-row gap-3">
+               <button onClick={handleSave} className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3.5 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-all w-full sm:w-auto"><Bullhorn /> Publikasikan Pesan</button>
+               <button onClick={handleClear} className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-6 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 transition-all w-full sm:w-auto"><Trash2 /> Hapus / Kosongkan</button>
+            </div>
+         </div>
+       );
+    }
+
+    function AdminDataGuru({ teachers, setTeachers, profil, showToast, showConfirm }) {
+      const [csvUrl, setCsvUrl] = useState("");
+      const [loading, setLoading] = useState(false);
+
+      const handleSyncGuru = async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(csvUrl);
+          if(!res.ok) throw new Error("Gagal mengambil data");
+          
+          const text = await res.text();
+          const rows = parseCSV(text);
+          
+          if (rows.length > 1) {
+            const header = rows[0].map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
+            const getCol = (hName) => header.findIndex(h => h.includes(hName.replace(/[^A-Z0-9]/g, '')));
+            
+            const iNama = getCol('NAMA');
+            const iNip = getCol('NIP');
+            const iWali = getCol('WALI');
+            const iMapel = getCol('MAPEL');
+            const iUser = getCol('USER');
+
+            const parsed = rows.slice(1).map((row, idx) => {
+              const gName = iNama !== -1 ? row[iNama] : `Guru ${idx+1}`;
+              if (!gName || gName.trim() === '') return null;
+              
+              const gUsername = iUser !== -1 && row[iUser] ? row[iUser] : gName.split(' ')[0].toLowerCase() + (idx+1);
+
+              return {
+                id: `G-${Date.now()}-${idx}`,
+                nama: gName.trim(),
+                nip: iNip !== -1 ? row[iNip] : '-',
+                waliKelas: iWali !== -1 ? row[iWali] : '-',
+                mapel: iMapel !== -1 ? row[iMapel] : '-',
+                username: gUsername.trim(),
+              };
+            }).filter(g => g !== null); 
+            
+            if (parsed.length > 0) {
+              setTeachers(parsed);
+              showToast(`Berhasil Sinkronisasi ${parsed.length} Data Guru!`);
+              syncToCloud('teachers', parsed, profil.tahunAjaran);
+            } else {
+              throw new Error("Data kosong atau format salah");
+            }
+          }
+        } catch (e) {
+           console.error(e);
+           showToast("Gagal menarik data. Pastikan link Google Sheets valid dan Publik (Cetak ke Web -> CSV).");
+        }
+        setLoading(false);
+      };
+
+      const deleteTeacher = (id) => {
+        showConfirm('Yakin ingin menghapus data guru ini?', () => {
+           const updated = teachers.filter(t => t.id !== id);
+           setTeachers(updated);
+           syncToCloud('teachers', updated, profil.tahunAjaran);
+           showToast('Data guru berhasil dihapus!');
+        });
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-4xl">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6"><Users className="text-xl sm:text-2xl"/></div>
+            <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800 mb-2">Sinkronisasi Database Guru (CSV)</h2>
+            <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Membaca otomatis dari Google Sheets. Pastikan ada Header dengan tulisan <b>NAMA, NIP, WALI KELAS, MAPEL, USERNAME</b> (Akan dibaca otomatis di kolom berapapun).</p>
+            
+            <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="flex-1 relative">
+                 <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+                 <input type="text" className="w-full pl-10 pr-3 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" value={csvUrl} onChange={e=>setCsvUrl(e.target.value)} placeholder="Masukkan link Publikasi CSV Google Sheets..." />
+              </div>
+              <button onClick={handleSyncGuru} disabled={loading || !csvUrl} className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-70 whitespace-nowrap">
+                {loading ? <RefreshCw className="animate-spin" /> : <Download />}
+                {loading ? 'Membaca Data...' : 'Sinkron Data Guru'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-3xl border border-slate-200 w-full overflow-hidden shadow-sm">
+            <table className="w-full text-left text-[8px] sm:text-sm table-fixed break-words">
+              <thead className="bg-slate-50 text-slate-600 font-extrabold border-b border-slate-200">
+                <tr>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[5%] sm:w-12 text-center">No</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[25%]">Nama Guru</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[20%]">NIP</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[15%] text-center">Wali Kelas</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[15%]">Mapel</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[15%]">Username (Login)</th>
+                  <th className="p-1 sm:px-4 sm:py-3 w-[10%] text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {teachers.map((t, i) => (
+                  <tr key={t.id} className="hover:bg-primaryLight/30 transition-colors">
+                    <td className="p-1 sm:px-4 sm:py-3 text-center text-slate-400 font-bold">{i+1}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 font-bold text-slate-800">{t.nama}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 text-slate-600">{t.nip}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 text-center"><span className="bg-slate-100 px-1 sm:px-3 py-0.5 sm:py-1 rounded-md sm:rounded-lg font-bold text-slate-600 block">{t.waliKelas}</span></td>
+                    <td className="p-1 sm:px-4 sm:py-3 text-slate-600 font-medium">{t.mapel}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 text-primary font-bold">{t.username}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 text-center">
+                      <button onClick={() => deleteTeacher(t.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 sm:p-2 rounded-lg transition-colors"><Trash2/></button>
+                    </td>
+                  </tr>
+                ))}
+                {teachers.length === 0 && <tr><td colSpan="7" className="p-8 text-center text-slate-400 font-bold text-xs sm:text-base">Belum Ada Data Guru. Silahkan Sinkronkan CSV.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminMasterMapel({ mapel, setMapel, ekskul, setEkskul, profil, showToast }) {
+      const [newMapel, setNewMapel] = useState('');
+      const [newEkskul, setNewEkskul] = useState('');
+
+      const addMapel = () => { 
+        if(newMapel) { 
+          const updated = [...mapel, newMapel]; setMapel(updated); 
+          syncToCloud('mapel', updated, profil.tahunAjaran); setNewMapel(''); showToast('Mata Pelajaran ditambahkan!'); 
+        } 
+      };
+      
+      const addEkskul = () => { 
+        if(newEkskul) { 
+          const updated = [...ekskul, newEkskul]; setEkskul(updated); 
+          syncToCloud('ekskul', updated, profil.tahunAjaran); setNewEkskul(''); showToast('Ekstrakurikuler ditambahkan!'); 
+        } 
+      };
+
+      const delMapel = (m) => { const updated = mapel.filter(i=>i!==m); setMapel(updated); syncToCloud('mapel', updated, profil.tahunAjaran); }
+      const delEkskul = (e) => { const updated = ekskul.filter(i=>i!==e); setEkskul(updated); syncToCloud('ekskul', updated, profil.tahunAjaran); }
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+          <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full max-h-[70vh]">
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primaryLight text-primary rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0"><BookOpen className="text-lg sm:text-xl"/></div>
+              <h2 className="font-extrabold text-lg sm:text-xl text-slate-800">Master Mata Pelajaran</h2>
+            </div>
+            <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <input type="text" className="flex-1 p-2 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-primary outline-none" placeholder="Nama Mapel Baru..." value={newMapel} onChange={e=>setNewMapel(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addMapel()} />
+              <button onClick={addMapel} className="bg-primary hover:bg-primaryHover text-white px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold shadow-md">Tambah</button>
+            </div>
+            <ul className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto pr-2" style={{scrollbarWidth: 'thin'}}>
+              {mapel.map((m, i) => (
+                <li key={i} className="p-3 sm:p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs sm:text-sm font-bold text-slate-700 flex justify-between items-center group hover:border-primary/30 hover:bg-white transition-all">
+                  {m}
+                  <button onClick={() => delMapel(m)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2/></button>
+                </li>
+              ))}
+              {mapel.length === 0 && <p className="text-slate-400 font-bold text-center mt-6 text-xs sm:text-sm">Belum Ada Mata Pelajaran</p>}
+            </ul>
+          </div>
+          
+          <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full max-h-[70vh]">
+            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0"><Activity className="text-lg sm:text-xl"/></div>
+              <h2 className="font-extrabold text-lg sm:text-xl text-slate-800">Master Ekstrakurikuler</h2>
+            </div>
+            <div className="flex gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <input type="text" className="flex-1 p-2 sm:p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama Ekskul Baru..." value={newEkskul} onChange={e=>setNewEkskul(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addEkskul()} />
+              <button onClick={addEkskul} className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold shadow-md">Tambah</button>
+            </div>
+            <ul className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto pr-2" style={{scrollbarWidth: 'thin'}}>
+              {ekskul.map((e, i) => (
+                <li key={i} className="p-3 sm:p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs sm:text-sm font-bold text-slate-700 flex justify-between items-center group hover:border-blue-200 hover:bg-white transition-all">
+                  {e}
+                  <button onClick={() => delEkskul(e)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2/></button>
+                </li>
+              ))}
+              {ekskul.length === 0 && <p className="text-slate-400 font-bold text-center mt-6 text-xs sm:text-sm">Belum Ada Ekstrakurikuler</p>}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminKKM({ kkmConfig, setKkmConfig, profil, showToast }) {
+      const [localKkm, setLocalKkm] = useState(kkmConfig);
+
+      const handleSave = () => {
+        setKkmConfig(localKkm);
+        syncToCloud('kkmConfig', localKkm, profil.tahunAjaran);
+        showToast('Konfigurasi KKM & Predikat berhasil disimpan!');
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-3xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6">
+            <div>
+              <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Pengaturan KKM & Predikat</h2>
+              <p className="text-slate-500 font-medium text-xs sm:text-sm">Tentukan batas nilai minimal untuk setiap predikat pada rapor.</p>
+            </div>
+            <button onClick={handleSave} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2">
+              <Save /> Simpan
+            </button>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2">KKM Sekolah (Batas Lulus)</label>
+              <input type="number" className="w-full sm:w-1/2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-base sm:text-lg font-black text-slate-800 outline-none focus:ring-2 focus:ring-primary" value={localKkm.kkm} onChange={e=>setLocalKkm({...localKkm, kkm: parseInt(e.target.value) || 0})} />
+            </div>
+
+            <div className="bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+               <h3 className="font-bold text-slate-800 mb-4 text-sm sm:text-base">Rentang Predikat Penilaian Rapor</h3>
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                     <label className="block text-xs font-bold text-slate-700 mb-1">Batas Minimal (A)</label>
+                     <input type="number" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-primary font-black outline-none focus:ring-2 focus:ring-primary" value={localKkm.batasA} onChange={e=>setLocalKkm({...localKkm, batasA: parseInt(e.target.value) || 0})} />
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-slate-700 mb-1">Batas Minimal (B)</label>
+                     <input type="number" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-blue-600 font-black outline-none focus:ring-2 focus:ring-blue-500" value={localKkm.batasB} onChange={e=>setLocalKkm({...localKkm, batasB: parseInt(e.target.value) || 0})} />
+                  </div>
+                  <div>
+                     <label className="block text-xs font-bold text-slate-700 mb-1">Batas Minimal (C)</label>
+                     <input type="number" className="w-full p-3 bg-white border border-slate-200 rounded-xl text-amber-600 font-black outline-none focus:ring-2 focus:ring-amber-500" value={localKkm.batasC} onChange={e=>setLocalKkm({...localKkm, batasC: parseInt(e.target.value) || 0})} />
+                  </div>
+               </div>
+               <p className="text-[10px] sm:text-xs text-slate-500 mt-4 font-medium">* Nilai di bawah rentang C otomatis akan mendapatkan predikat (D) - Perlu Bimbingan.</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminDataSiswa({ allStudents, setAllStudents, profil, showToast }) {
+      const [csvUrl, setCsvUrl] = useState("https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9NDKstrj0d9JH7PSMGc4X9ZP1JEarvqoXhF2BZcesqs52oW_jYNKd_fI832uYg/pub?gid=1632329455&single=true&output=csv");
+      const [loading, setLoading] = useState(false);
+
+      const handleSync = async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(csvUrl);
+          if(!res.ok) throw new Error("Gagal mengambil data");
+          
+          const text = await res.text();
+          const rows = parseCSV(text);
+          
+          if (rows.length > 1) {
+            const header = rows[0].map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
+            const getCol = (hName) => header.findIndex(h => h.includes(hName.replace(/[^A-Z0-9]/g, '')));
+            const getColBy = (matcher) => header.findIndex(h => matcher(h));
+            
+            const iNama = getCol('NAMASISWA');
+            const iNisn = getColBy(h => h === 'NISN' || h.includes('NISN') || h.includes('NASIONAL'));
+            const iNis = getColBy(h => h === 'NIS' || (h.includes('NIS') && !h.includes('NISN')) || (h.includes('NOMORINDUK') && !h.includes('NASIONAL') && !h.includes('NISN')));
+            const iRombel = getCol('ROMBELSD');
+            const iTempatLahir = getCol('TEMPATTANGGALLAHIR');
+            const iJK = getCol('JENISKELAMIN');
+            const iNamaAyah = getCol('NAMAAYAH');
+            const iNamaIbu = getCol('NAMAIBU');
+            const iKerjaAyah = getCol('PEKERJAANAYAH');
+            const iKerjaIbu = getCol('PEKERJAANIBU');
+            const iDusun = getCol('DUSUN');
+            const iDesa = getCol('DESA');
+            const iKec = getCol('KECAMATAN');
+            const iKab = getCol('KABUPATEN');
+            const iAgama = getCol('AGAMA');
+
+            const parsed = rows.slice(1).map((row, idx) => {
+              const sName = iNama !== -1 ? row[iNama] : `Siswa ${idx+1}`;
+              if (!sName || sName.trim() === '') return null;
+              const nisnVal = iNisn !== -1 ? row[iNisn] : `00${idx}`;
+              
+              const existing = allStudents.find(old => old.nama === sName.trim() || old.nisn === nisnVal);
+              const sId = existing ? existing.id : `S-${Date.now()}-${idx}`;
+
+              return {
+                id: sId,
+                nama: sName.trim(),
+                nisn: nisnVal,
+                nis: iNis !== -1 ? row[iNis] : '-',
+                rombelSD: iRombel !== -1 ? row[iRombel] : '-',
+                tempatTanggalLahir: iTempatLahir !== -1 ? row[iTempatLahir] : '-',
+                jenisKelamin: iJK !== -1 ? row[iJK] : '-',
+                agama: iAgama !== -1 && row[iAgama] ? row[iAgama] : 'Islam',
+                namaAyah: iNamaAyah !== -1 ? row[iNamaAyah] : '-',
+                namaIbu: iNamaIbu !== -1 ? row[iNamaIbu] : '-',
+                pekerjaanAyah: iKerjaAyah !== -1 ? row[iKerjaAyah] : '-',
+                pekerjaanIbu: iKerjaIbu !== -1 ? row[iKerjaIbu] : '-',
+                alamat: {
+                  jalan: iDusun !== -1 ? row[iDusun] : '-',
+                  desa: iDesa !== -1 ? row[iDesa] : '-',
+                  kecamatan: iKec !== -1 ? row[iKec] : '-',
+                  kabupaten: iKab !== -1 ? row[iKab] : '-',
+                }
+              };
+            }).filter(s => s !== null); 
+            
+            if (parsed.length > 0) {
+              setAllStudents(parsed);
+              showToast(`Berhasil Sinkronisasi Master Data ${parsed.length} Siswa! Sistem pintar membaca header.`);
+              syncToCloud('allStudents', parsed, profil.tahunAjaran);
+            } else {
+              throw new Error("Data kosong atau format salah");
+            }
+          }
+        } catch (e) {
+           console.error(e);
+           showToast("Gagal menarik data. Pastikan link Google Sheets valid dan publik.");
+        }
+        setLoading(false);
+      };
+      
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-4xl">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6"><RefreshCw className="text-xl sm:text-2xl"/></div>
+          <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800 mb-2">Sinkronisasi Database Induk Siswa</h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Membaca otomatis dari Google Sheets. Posisi kolom bebas (Sistem membaca teks Header). Nanti Guru Wali akan menarik datanya berdasarkan Rombel SD.</p>
+          
+          <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex-1 relative">
+               <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+               <input type="text" className="w-full pl-10 pr-3 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none" value={csvUrl} onChange={e=>setCsvUrl(e.target.value)} placeholder="https://docs.google.com/..." />
+            </div>
+            <button onClick={handleSync} disabled={loading} className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-70 whitespace-nowrap">
+              {loading ? <RefreshCw className="animate-spin" /> : <Download />}
+              {loading ? 'Membaca Data...' : 'Sinkron & Simpan Master'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminProfil({ profil, setProfil, showToast }) {
+      const fields = [
+        { key: 'namaSekolah', label: 'Nama Sekolah', type: 'text' },
+        { key: 'npsn', label: 'NPSN', type: 'text' },
+        { key: 'kepalaSekolah', label: 'Nama Kepala Sekolah', type: 'text' },
+        { key: 'nip', label: 'NIP Kepala Sekolah', type: 'text' },
+        { key: 'semester', label: 'Semester', type: 'text' },
+        { key: 'tahunAjaran', label: 'Tahun Ajaran', type: 'text' },
+        { key: 'tanggalRaport', label: 'Tanggal Raport', type: 'text' },
+        { key: 'kecamatan', label: 'Kecamatan di Raport (Otomatis dipakai untuk Titimangsa TTD)', type: 'text' },
+        { key: 'alamat', label: 'Alamat Sekolah', type: 'textarea' },
+        { key: 'logo', label: 'Link Logo Sekolah (G-Drive atau URL Bebas)', type: 'text' }
+      ];
+
+      const handleSave = () => {
+        localStorage.setItem('activeTahunAjaran', profil.tahunAjaran.replace(/\//g, '_').replace(/ /g, ''));
+        if(profil.logo) localStorage.setItem('savedSchoolLogo', profil.logo); // Update cache
+        syncToCloud('profil', profil, profil.tahunAjaran);
+        showToast('Profil Sekolah Berhasil Disimpan ke Database!');
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-5xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6">
+            <div>
+              <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Profil Sekolah Lengkap</h2>
+              <p className="text-slate-500 font-medium text-xs sm:text-sm">Data ini akan tercetak otomatis sebagai Kop Surat dan Identitas Rapor.</p>
+            </div>
+            <button onClick={handleSave} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold shadow-md shadow-primary/20 flex justify-center items-center gap-2">
+              <Save /> Simpan Profil
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-6">
+            {fields.map(f => (
+              <div key={f.key} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1 sm:mb-2">{f.label}</label>
+                {f.type === 'textarea' ? (
+                  <textarea className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary" rows="3" value={profil[f.key] || ''} onChange={e=>setProfil({...profil, [f.key]: e.target.value})} />
+                ) : (
+                  <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary" value={profil[f.key] || ''} onChange={e=>setProfil({...profil, [f.key]: e.target.value})} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function AdminPengaturanTema({ temaConfig, setTemaConfig, profil, showToast }) {
+       const [localTema, setLocalTema] = useState(temaConfig);
+
+       const handleSave = () => {
+         setTemaConfig(localTema);
+         syncToCloud('temaConfig', localTema, profil.tahunAjaran);
+         showToast('Pengaturan Tema & Tampilan berhasil disimpan!');
+       };
+
+       return (
+         <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-4xl">
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 mb-6 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primaryLight text-primary rounded-xl flex items-center justify-center shrink-0"><Palette className="text-2xl" /></div>
+                <div>
+                   <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Pengaturan Tema & Tampilan</h2>
+                   <p className="text-slate-500 font-medium text-xs sm:text-sm">Ubah warna aplikasi, foto kepala sekolah, dan konfigurasi cetak.</p>
+                </div>
+             </div>
+             <button onClick={handleSave} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2">
+               <Save /> Simpan Tema
+             </button>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="space-y-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                   <h3 className="font-bold text-slate-800 mb-3 text-sm">Warna Utama Aplikasi</h3>
+                   <select className="w-full p-3 border border-slate-300 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary" value={localTema.colorTheme} onChange={e=>setLocalTema({...localTema, colorTheme: e.target.value})}>
+                     <option value="hijau">Hijau Emerald (Default)</option>
+                     <option value="biru">Biru Samudra</option>
+                     <option value="ungu">Ungu Elegan</option>
+                     <option value="merah">Merah Delima</option>
+                   </select>
+                </div>
+
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                   <h3 className="font-bold text-slate-800 mb-3 text-sm">Foto Profil Kepala Sekolah / Admin</h3>
+                   <p className="text-xs text-slate-500 mb-3">Masukkan link gambar (URL) untuk mengganti inisial profil di pojok kanan atas.</p>
+                   <input type="text" className="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." value={localTema.adminPhoto} onChange={e=>setLocalTema({...localTema, adminPhoto: e.target.value})} />
+                </div>
+             </div>
+
+             <div className="space-y-6">
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                   <h3 className="font-bold text-slate-800 mb-3 text-sm">Watermark Cetak & Background</h3>
+                   <label className="flex items-center gap-3 cursor-pointer mb-4">
+                     <input type="checkbox" className="w-5 h-5 accent-primary" checked={localTema.useWatermark} onChange={e=>setLocalTema({...localTema, useWatermark: e.target.checked})} />
+                     <span className="font-bold text-slate-700 text-sm">Gunakan Watermark Logo di Tengah Kertas</span>
+                   </label>
+                   {localTema.useWatermark && (
+                      <div>
+                         <label className="block text-xs font-bold text-slate-600 mb-2">Tingkat Opasitas (%) - Default 15%</label>
+                         <input type="range" min="5" max="50" className="w-full accent-primary" value={localTema.watermarkOpacity} onChange={e=>setLocalTema({...localTema, watermarkOpacity: parseInt(e.target.value)})} />
+                         <div className="text-right text-xs font-bold text-primary mt-1">{localTema.watermarkOpacity}%</div>
+                      </div>
+                   )}
+                </div>
+
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                   <h3 className="font-bold text-slate-800 mb-3 text-sm">Warna Header Tabel Cetak Rapor</h3>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div>
+                         <label className="block text-xs font-bold text-slate-600 mb-2">Warna Latar (Background)</label>
+                         <input type="color" className="w-full h-10 rounded cursor-pointer" value={localTema.tableHeaderBg} onChange={e=>setLocalTema({...localTema, tableHeaderBg: e.target.value})} />
+                      </div>
+                      <div>
+                         <label className="block text-xs font-bold text-slate-600 mb-2">Warna Teks</label>
+                         <input type="color" className="w-full h-10 rounded cursor-pointer" value={localTema.tableHeaderTxt} onChange={e=>setLocalTema({...localTema, tableHeaderTxt: e.target.value})} />
+                      </div>
+                   </div>
+                </div>
+             </div>
+           </div>
+         </div>
+       );
+    }
+
+    function AdminProgressGuru({ teachers, students, mapelList, studentGrades, materiGuru, calculateNA }) {
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm max-w-5xl">
+          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0"><PieChart className="text-xl sm:text-2xl"/></div>
+             <div>
+                <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Pantau Progress Guru</h2>
+                <p className="text-slate-500 font-medium text-[10px] sm:text-sm">Lihat sejauh mana Wali Kelas telah mengisi nilai (Berdasarkan total Siswa & Mapel).</p>
+             </div>
+          </div>
+          <div className="w-full overflow-x-auto border border-slate-200 rounded-xl sm:rounded-2xl">
+            <table className="w-full text-left text-[9px] sm:text-sm table-fixed break-words min-w-[500px]">
+              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <tr>
+                  <th className="p-2 sm:px-4 sm:py-3 border-r w-[25%]">Nama Guru</th>
+                  <th className="p-2 sm:px-4 sm:py-3 border-r text-center w-[15%]">Wali Kelas</th>
+                  <th className="p-2 sm:px-4 sm:py-3 border-r text-center w-[15%]">Jml Siswa</th>
+                  <th className="p-2 sm:px-4 sm:py-3 border-r text-center w-[20%]">Nilai Terisi</th>
+                  <th className="p-2 sm:px-4 sm:py-3 text-center w-[25%]">Progress</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {teachers.length === 0 ? <tr><td colSpan="5" className="p-8 text-center text-slate-400 font-bold">Data Guru Masih Kosong.</td></tr> : teachers.map((t, idx) => {
+                   const classStudents = students.filter(s => s.rombelSD === t.waliKelas);
+                   let totalExpected = mapelList.length * classStudents.length;
+                   let totalFilled = 0;
+                   
+                   if (totalExpected > 0) {
+                      mapelList.forEach(m => {
+                         classStudents.forEach(s => {
+                            if (calculateNA(m, s.id, materiGuru, studentGrades) !== null) {
+                               totalFilled++;
+                            }
+                         });
+                      });
+                   }
+                   const progress = totalExpected === 0 ? 0 : Math.round((totalFilled / totalExpected) * 100);
+
+                   return (
+                     <tr key={t.id || idx} className="hover:bg-slate-50">
+                       <td className="p-2 sm:px-4 sm:py-3 font-bold text-slate-800 border-r">{t.nama}</td>
+                       <td className="p-2 sm:px-4 sm:py-3 text-primary font-black text-center border-r">{t.waliKelas}</td>
+                       <td className="p-2 sm:px-4 sm:py-3 text-slate-600 font-bold text-center border-r">{classStudents.length}</td>
+                       <td className="p-2 sm:px-4 sm:py-3 text-slate-700 font-bold text-center border-r">{totalFilled}/{totalExpected}</td>
+                       <td className="p-2 sm:px-4 sm:py-3 px-2">
+                         <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-3 mb-0.5 sm:mb-1">
+                           <div className={`h-1.5 sm:h-3 rounded-full ${progress === 100 ? 'bg-primary' : 'bg-blue-500'}`} style={{width: `${progress}%`}}></div>
+                         </div>
+                         <span className="text-[8px] sm:text-xs font-bold text-slate-500 block text-center">{progress}% Selesai</span>
+                       </td>
+                     </tr>
+                   )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminPrintFilter({ defaultContext, renderComponent, showToast }) {
+      const generateYears = () => {
+        const startYear = 2021;
+        return Array.from({length: 15}, (_, i) => `${startYear+i}/${startYear+i+1}`);
+      };
+
+      const [filterTahun, setFilterTahun] = useState(defaultContext.profil.tahunAjaran || '2024/2025');
+      const [filterSemester, setFilterSemester] = useState(defaultContext.profil.semester || '1 (SATU)');
+      const [rombel, setRombel] = useState('');
+      const [isLoading, setIsLoading] = useState(false);
+      const [hData, setHData] = useState(null);
+
+      const yearOptions = generateYears();
+
+      const handleLoadData = async () => {
+         setIsLoading(true);
+         setRombel(''); 
+         try {
+            const activeYear = filterTahun.replace(/\//g, '_').replace(/ /g, '');
+            const res = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ action: 'loadAll', tahunAjaran: `Tahun_${activeYear}` })
+            });
+            const json = await res.json();
+            if (json.status === 'success' && json.data && Object.keys(json.data).length > 0) {
+               setHData(json.data);
+               showToast(`Berhasil menarik data historis untuk Tahun Ajaran ${filterTahun}`);
+            } else {
+               showToast(`Data belum ada/kosong untuk Tahun Ajaran ${filterTahun}. Sistem akan menampilkan data apa adanya.`);
+               setHData(null);
+            }
+         } catch (e) {
+            showToast('Gagal menghubungi server database.');
+         } finally {
+            setIsLoading(false);
+         }
+      };
+
+      const ctx = hData ? {
+         profil: hData.profil || INITIAL_PROFIL,
+         temaConfig: hData.temaConfig || INITIAL_TEMA,
+         teachers: hData.teachers || [],
+         mapel: hData.mapel || [],
+         ekskul: hData.ekskul || [],
+         allStudents: hData.allStudents || [],
+         materiGuru: hData.materiGuru || {},
+         lingkupMateriGuru: hData.lingkupMateriGuru || {},
+         studentGrades: hData.studentGrades || {},
+         absensi: hData.absensi || {},
+         ekskulData: hData.ekskulData || {},
+         kokuData: hData.kokuData || {},
+         dimensiTarget: hData.dimensiTarget || DIMENSI_P5,
+         kkmConfig: hData.kkmConfig || INITIAL_KKM
+      } : defaultContext;
+
+      const printProfil = { ...ctx.profil, semester: filterSemester, tahunAjaran: filterTahun };
+      const rombelOptions = [...new Set(ctx.allStudents.map(s => s.rombelSD))].filter(r => r && r !== '-');
+      const filteredStudents = ctx.allStudents.filter(s => s.rombelSD === rombel);
+      const waliKelas = ctx.teachers.find(t => t.waliKelas === rombel);
+      const waliKelasName = waliKelas ? waliKelas.nama : 'Kepala Sekolah / Admin';
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <h2 className="font-extrabold text-lg sm:text-xl text-slate-800 mb-2">Filter Data Cetak Global (Historis)</h2>
+            <p className="text-slate-500 font-medium text-xs sm:text-sm mb-4 sm:mb-6">Ubah Tahun Ajaran dan Semester lalu klik "Tarik Data Historis" untuk melihat rekaman arsip nilai masa lalu.</p>
+            
+            <div className="flex flex-col md:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="flex-1">
+                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 mb-1 sm:mb-2 block">Tahun Ajaran</label>
+                 <select className="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:ring-2 focus:ring-primary font-bold text-slate-700 bg-slate-50 text-xs sm:text-sm" value={filterTahun} onChange={e=>setFilterTahun(e.target.value)}>
+                    {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                 </select>
+              </div>
+              <div className="flex-1">
+                 <label className="text-[10px] sm:text-xs font-bold text-slate-500 mb-1 sm:mb-2 block">Semester</label>
+                 <select className="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:ring-2 focus:ring-primary font-bold text-slate-700 bg-slate-50 text-xs sm:text-sm" value={filterSemester} onChange={e=>setFilterSemester(e.target.value)}>
+                    <option value="1 (SATU)">1 (SATU) / Ganjil</option>
+                    <option value="2 (DUA)">2 (DUA) / Genap</option>
+                 </select>
+              </div>
+              <div className="flex items-end">
+                 <button onClick={handleLoadData} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 w-full md:w-auto transition-all disabled:opacity-70 h-[46px] sm:h-[56px]">
+                    {isLoading ? <RefreshCw className="animate-spin"/> : <Search />}
+                    Tarik Historis
+                 </button>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 sm:pt-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+              <span className="font-extrabold text-slate-800 shrink-0 text-xs sm:text-sm">Pilih Kelas / Rombel :</span>
+              <select className="w-full sm:w-auto p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:ring-2 focus:ring-primary font-bold text-slate-700 bg-primaryLight text-primaryHover text-xs sm:text-sm" value={rombel} onChange={e=>setRombel(e.target.value)}>
+                <option value="">-- Silahkan Pilih Kelas Dulu --</option>
+                {rombelOptions.map(r => <option key={r} value={r}>Kelas {r}</option>)}
+              </select>
+              {rombel && <span className="text-[10px] sm:text-sm font-bold text-primary bg-primaryLight px-3 sm:px-5 py-2 sm:py-3 rounded-lg sm:rounded-xl">Wali: {waliKelasName}</span>}
+            </div>
+          </div>
+
+          {rombel ? (
+            renderComponent(filteredStudents, rombel, waliKelasName, ctx, printProfil)
+          ) : (
+            <div className="text-center p-8 sm:p-12 bg-white/90 backdrop-blur-sm rounded-[2rem] shadow-sm border border-slate-100 max-w-2xl mx-auto">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-slate-50 text-slate-400 rounded-2xl sm:rounded-[2rem] flex items-center justify-center mx-auto mb-4 sm:mb-6"><Filter className="text-2xl sm:text-4xl" /></div>
+              <h2 className="font-extrabold text-lg sm:text-xl text-slate-800">Menunggu Pilihan Kelas</h2>
+              <p className="text-slate-500 font-medium text-xs sm:text-sm">Pilih kelas dari dropdown di atas untuk membuka dokumen Rapor/Leger secara rinci.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- GURU SCREENS ---
+
+    function GuruProfil({ guruProfil, setGuruProfil, username, profil, showToast }) {
+       const [fotoUrl, setFotoUrl] = useState(guruProfil[username]?.photo || '');
+
+       const handleSave = () => {
+          setGuruProfil(prev => {
+             const updated = { ...prev, [username]: { photo: fotoUrl } };
+             syncToCloud('guruProfil', updated, profil.tahunAjaran);
+             return updated;
+          });
+          showToast('Profil foto berhasil disimpan!');
+       };
+
+       return (
+         <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 max-w-2xl">
+            <div className="flex items-center gap-4 mb-6 border-b border-slate-100 pb-4">
+               <div className="w-12 h-12 bg-primaryLight text-primary rounded-xl flex items-center justify-center shrink-0"><UserIcon className="text-2xl" /></div>
+               <div>
+                  <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800">Profil & Tema Guru</h2>
+                  <p className="text-slate-500 font-medium text-xs sm:text-sm">Ganti foto profil yang muncul di bagian kanan atas aplikasi.</p>
+               </div>
+            </div>
+            
+            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-6">
+               <h3 className="font-bold text-slate-800 mb-2 text-sm">Link Foto Profil</h3>
+               <p className="text-xs text-slate-500 mb-3">Masukkan link gambar (URL bebas / Google Drive yang di-share publik).</p>
+               <input type="text" className="w-full p-3 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." value={fotoUrl} onChange={e=>setFotoUrl(e.target.value)} />
+            </div>
+
+            <button onClick={handleSave} className="bg-primary hover:bg-primaryHover text-white px-6 py-3 rounded-xl font-bold flex justify-center items-center gap-2 shadow-md w-full sm:w-auto">
+               <Save /> Simpan Profil
+            </button>
+         </div>
+       );
+    }
+
+    function GuruPengaturanMapel({ mapelList, activeMapelList, setGuruMapelConfig, username, currentRombel, profil, showToast }) {
+      const [localMapel, setLocalMapel] = useState(activeMapelList);
+
+      const toggleMapel = (m) => {
+        if(localMapel.includes(m)) {
+          setLocalMapel(localMapel.filter(item => item !== m));
+        } else {
+          setLocalMapel([...localMapel, m]);
+        }
+      };
+
+      const handleSave = () => {
+        const configKey = currentRombel ? `${username}_${currentRombel}` : username;
+        setGuruMapelConfig(prev => {
+           const updated = {...prev, [configKey]: localMapel};
+           syncToCloud('guruMapelConfig', updated, profil.tahunAjaran);
+           return updated;
+        });
+        showToast(`Pengaturan Mapel untuk Kelas ${currentRombel || ''} Berhasil Disimpan!`);
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 max-w-2xl">
+          <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800 mb-2">Pilih Mata Pelajaran Diampu <span className="text-primary">({currentRombel})</span></h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Hilangkan centang pada mata pelajaran yang tidak Anda ajarkan di kelas <b>{currentRombel}</b>. Mapel ini akan berubah otomatis jika Anda mengganti Kelas/Rombel.</p>
+          
+          <div className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 max-h-[400px] overflow-y-auto pr-2">
+            {mapelList.length === 0 ? <p className="text-red-500 font-bold text-sm">Admin Belum Membuat Mata Pelajaran.</p> : mapelList.map(m => (
+              <label key={m} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                <input type="checkbox" className="w-4 h-4 sm:w-5 sm:h-5 accent-primary cursor-pointer" checked={localMapel.includes(m)} onChange={() => toggleMapel(m)} />
+                <span className="font-bold text-slate-700 text-xs sm:text-base">{m}</span>
+              </label>
+            ))}
+          </div>
+          <button onClick={handleSave} className="bg-primary hover:bg-primaryHover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md w-full text-sm sm:text-base">
+            <Save /> Simpan Pengaturan Mapel
+          </button>
+        </div>
+      );
+    }
+
+    function GuruDashboard({ user, students, mapelList, studentGrades, calculateNA, currentRombel, onInstallClick, profil }) {
+      let totalExpected = mapelList.length * students.length;
+      let totalFilled = 0;
+      
+      if (totalExpected > 0) {
+         mapelList.forEach(m => {
+            students.forEach(s => {
+               if (calculateNA(m, s.id) !== null) {
+                  totalFilled++;
+               }
+            });
+         });
+      }
+      const progress = totalExpected === 0 ? 0 : Math.round((totalFilled / totalExpected) * 100);
+
+      return (
+        <div className="space-y-4 sm:space-y-6">
+          
+          {profil?.pengumuman && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 sm:p-6 rounded-r-2xl shadow-sm mb-2 flex gap-4 items-start animate-slide-down relative overflow-hidden">
+               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0 mt-1 shadow-inner relative z-10">
+                  <i className="fas fa-bell animate-bounce-slow"></i>
+               </div>
+               <div className="relative z-10">
+                  <h3 className="font-extrabold text-amber-900 text-sm sm:text-base mb-1 tracking-tight">Pengumuman dari Kepala Sekolah</h3>
+                  <p className="text-amber-800 text-xs sm:text-sm font-medium whitespace-pre-wrap leading-relaxed">{profil.pengumuman}</p>
+               </div>
+               <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-4 -translate-y-4">
+                  <Bullhorn className="text-[6rem] text-amber-900" />
+               </div>
+            </div>
+          )}
+
+          <div className="bg-gradient-to-r from-primaryHover to-primary rounded-[2rem] p-6 sm:p-10 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="relative z-10">
+              <h2 className="text-xl sm:text-3xl font-extrabold mb-2 sm:mb-3 tracking-tight">Selamat datang, {user.name}! 👋</h2>
+              <p className="text-primaryLight font-medium max-w-2xl text-xs sm:text-base leading-relaxed opacity-90">
+                {currentRombel 
+                   ? `Anda saat ini aktif di Kelas ${currentRombel}. Semua guru dapat memilih kelas mana pun untuk mengisi nilai pelajaran yang diampunya.` 
+                   : `PENTING: Anda belum memilih Kelas/Rombel. Harap menuju menu "Pilih / Ganti Kelas" untuk membuka akses pengisian nilai.`}
+              </p>
+            </div>
+            
+            <button onClick={onInstallClick} className="relative z-10 bg-white/20 hover:bg-white/30 backdrop-blur border border-white/30 text-white px-6 py-3 rounded-xl font-bold shadow-md flex items-center gap-2 transition-all shrink-0 active:scale-95">
+               <Download /> Instal / Layar Penuh
+            </button>
+
+            <div className="absolute -right-5 -bottom-10 sm:-right-10 opacity-20 pointer-events-none transform -rotate-12"><BookOpen className="text-[10rem] sm:text-[16rem]" /></div>
+          </div>
+
+          {currentRombel && (
+            <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-6 sm:gap-8">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 relative shrink-0">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path className="text-slate-100" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path className="text-primary" strokeDasharray={`${progress}, 100`} strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="text-xl sm:text-2xl font-black text-slate-800">{progress}%</span>
+                </div>
+              </div>
+              <div className="text-center md:text-left">
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 mb-1 sm:mb-2">Progress Pengisian Kelas {currentRombel}</h3>
+                <p className="text-slate-500 font-medium text-xs sm:text-sm mb-3 sm:mb-4">Perhitungan diakumulasi dari total <b>{students.length} Siswa</b> pada <b>{mapelList.length} Mata Pelajaran</b>.</p>
+                <div className="flex gap-1.5 sm:gap-2 flex-wrap justify-center md:justify-start">
+                  {mapelList.map(m => {
+                    let filledForMapel = 0;
+                    students.forEach(s => { if(calculateNA(m, s.id) !== null) filledForMapel++; });
+                    const isDone = students.length > 0 && filledForMapel === students.length;
+                    
+                    return <span key={m} className={`px-2 py-1 sm:px-3 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-bold ${isDone ? 'bg-primaryLight text-primaryHover' : 'bg-slate-100 text-slate-500'}`}>{m}</span>
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function GuruTarikSiswa({ allStudents, guruRombelConfig, setGuruRombelConfig, username, profil, showToast }) {
+      const [selectedRombel, setSelectedRombel] = useState(guruRombelConfig[username] || '');
+      
+      const rombelOptions = [...new Set(allStudents.map(s => s.rombelSD))].filter(r => r && r !== '-');
+
+      const handleTarik = () => {
+        if(!selectedRombel) { showToast('Pilih Rombel Terlebih Dahulu!'); return; }
+        
+        setGuruRombelConfig(prev => {
+          const updated = { ...prev, [username]: selectedRombel };
+          syncToCloud('guruRombelConfig', updated, profil.tahunAjaran);
+          return updated;
+        });
+
+        showToast(`Sistem berhasil beralih ke Rombel Kelas ${selectedRombel}. TP dan Nilai kini terhubung ke kelas ini!`);
+      };
+
+      return (
+        <div className="text-center p-8 sm:p-12 bg-white/90 backdrop-blur-sm rounded-[2rem] shadow-sm border border-slate-100 max-w-2xl mx-auto">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 bg-primaryLight text-primary rounded-[2rem] flex items-center justify-center mx-auto mb-4 sm:mb-6"><RefreshCw className="text-2xl sm:text-4xl" /></div>
+          <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800 mb-2 sm:mb-4">Pilih & Kunci Rombel Aktif</h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Semua guru dapat melihat dan mengisi kelas manapun. Saat Anda berpindah kelas, <b>Mata Pelajaran dan Siswa otomatis berganti</b> menyesuaikan dengan kelas yang Anda pilih.</p>
+          
+          {allStudents.length === 0 ? (
+            <div className="bg-red-50 text-red-700 p-4 rounded-xl font-bold mb-6 text-sm">Database Induk Kosong! Hubungi Admin untuk Sync CSV.</div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
+               <select className="flex-1 p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl outline-none focus:ring-2 focus:ring-primary font-bold bg-slate-50 text-sm" value={selectedRombel} onChange={e=>setSelectedRombel(e.target.value)}>
+                 <option value="">-- Pilih Rombel SD --</option>
+                 {rombelOptions.map(r => <option key={r} value={r}>{r}</option>)}
+               </select>
+               <button onClick={handleTarik} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-md transition-all whitespace-nowrap text-sm sm:text-base">Kunci Kelas Ini</button>
+            </div>
+          )}
+
+          {guruRombelConfig[username] && (
+            <div className="bg-blue-50 text-blue-800 p-3 sm:p-4 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm">
+              ✅ Anda saat ini sedang mengelola / mengisi data untuk <span className="underline font-black text-lg ml-1 text-blue-900">KELAS {guruRombelConfig[username]}</span>.
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function GuruInputMateri({ mapelList, materiGuru, setMateriGuru, lingkupMateriGuru, setLingkupMateriGuru, currentRombel, profil, showToast }) {
+      const [selectedMapel, setSelectedMapel] = useState(mapelList[0] || '');
+      const [tpInput, setTpInput] = useState(Array(7).fill(''));
+      const [lingkupInput, setLingkupInput] = useState(Array(7).fill(''));
+
+      // KEY MATERI BERDASARKAN ROMBEL + MAPEL
+      const materiKey = `${currentRombel}_${selectedMapel}`;
+
+      useEffect(() => {
+        if (!selectedMapel && mapelList.length > 0) setSelectedMapel(mapelList[0]);
+      }, [mapelList, selectedMapel]);
+
+      useEffect(() => { 
+         const rawTp = padArray(materiGuru[materiKey] || materiGuru[selectedMapel] || []);
+         const rawLingkup = padArray(lingkupMateriGuru[materiKey] || lingkupMateriGuru[selectedMapel] || []);
+         setTpInput(rawTp.map(v => isLingkupMateri(v) ? '' : stripMateriPrefix(v)));
+         setLingkupInput(rawLingkup.some(v => stripMateriPrefix(v) !== '') ? rawLingkup.map(stripMateriPrefix) : rawTp.map(v => isLingkupMateri(v) ? stripMateriPrefix(v) : ''));
+      }, [selectedMapel, materiGuru, lingkupMateriGuru, currentRombel, materiKey]);
+
+      const handleSave = () => {
+        const updatedMateri = tpInput.map(m => m.trim());
+        const updatedLingkup = lingkupInput.map(m => m.trim());
+        setMateriGuru(prev => {
+          const stateUpdate = { ...prev, [materiKey]: updatedMateri };
+          syncToCloud('materiGuru', stateUpdate, profil.tahunAjaran);
+          return stateUpdate;
+        });
+        setLingkupMateriGuru(prev => {
+          const stateUpdate = { ...prev, [materiKey]: updatedLingkup };
+          syncToCloud('lingkupMateriGuru', stateUpdate, profil.tahunAjaran);
+          return stateUpdate;
+        });
+        showToast(`Tujuan Pembelajaran dan Lingkup Materi Kelas ${currentRombel} - ${selectedMapel} disimpan!`);
+      };
+
+      const updateTp = (idx, newText) => {
+         const newM = [...tpInput];
+         newM[idx] = newText;
+         setTpInput(newM);
+      };
+
+      const updateLingkup = (idx, newText) => {
+         const newM = [...lingkupInput];
+         newM[idx] = newText;
+         setLingkupInput(newM);
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4 border-b border-slate-100 pb-4 sm:pb-6">
+            <div>
+              <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800 mb-1">Input Tujuan Pembelajaran</h2>
+              <p className="text-slate-500 font-medium text-[10px] sm:text-sm">Tujuan pembelajaran dipakai untuk deskripsi capaian rapor. Lingkup materi disimpan terpisah sebagai subjudul pendukung.</p>
+            </div>
+            <select className="p-3 sm:p-3.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto text-xs sm:text-sm" value={selectedMapel} onChange={e=>setSelectedMapel(e.target.value)}>
+              {mapelList.map(m => <option key={m}>{m}</option>)}
+            </select>
+          </div>
+          
+          {mapelList.length === 0 ? <p className="font-bold text-red-500 text-sm">Anda belum memilih Mapel di menu Pengaturan Mapel.</p> : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="font-extrabold text-slate-800 text-sm sm:text-base">Tujuan Pembelajaran 1-7</h3>
+                  {tpInput.map((val, idx) => (
+                    <div key={idx} className="flex items-center gap-2 sm:gap-4">
+                       <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primaryLight text-primaryHover font-extrabold rounded-lg sm:rounded-xl shrink-0 text-xs sm:text-sm">{idx+1}</span>
+                       <input type="text" className="flex-1 w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-primary outline-none transition-all" placeholder="Contoh: memahami nilai baik yang tertuang di dalam Pancasila..." value={val} onChange={(e) => updateTp(idx, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-3 sm:space-y-4">
+                  <h3 className="font-extrabold text-slate-800 text-sm sm:text-base">Lingkup Materi 1-7</h3>
+                  {lingkupInput.map((val, idx) => (
+                    <div key={idx} className="flex items-center gap-2 sm:gap-4">
+                       <span className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-blue-50 text-blue-700 font-extrabold rounded-lg sm:rounded-xl shrink-0 text-xs sm:text-sm">{idx+1}</span>
+                       <input type="text" className="flex-1 w-full p-2 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Contoh: Bilangan cacah / Nilai Pancasila / Perubahan wujud benda..." value={val} onChange={(e) => updateLingkup(idx, e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleSave} className="mt-6 sm:mt-8 w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold shadow-md flex items-center justify-center gap-2 text-sm sm:text-base"><Save /> Simpan Materi Kelas {currentRombel}</button>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    function GuruInputNilai({ mapelList, materiGuru, studentGrades, setStudentGrades, students, calculateNA, currentRombel, profil, showToast, showConfirm }) {
+      const [selectedMapel, setSelectedMapel] = useState(mapelList[0] || '');
+      const grades = studentGrades[selectedMapel] || {};
+      
+      useEffect(() => {
+        if (!selectedMapel && mapelList.length > 0) setSelectedMapel(mapelList[0]);
+      }, [mapelList, selectedMapel]);
+
+      const materiKey = currentRombel ? `${currentRombel}_${selectedMapel}` : selectedMapel;
+      const currentMateriRaw = materiGuru[materiKey] || materiGuru[selectedMapel] || [];
+      const currentMateri = currentMateriRaw.filter(isTujuanPembelajaran).map(stripMateriPrefix);
+
+      const handleChange = (studentId, field, val) => {
+        const valFloat = val === '' ? undefined : parseFloat(val);
+        setStudentGrades(prev => ({
+          ...prev, 
+          [selectedMapel]: {
+            ...(prev[selectedMapel] || {}),
+            [studentId]: { ...((prev[selectedMapel] || {})[studentId] || {}), [field]: valFloat }
+          }
+        }));
+      };
+
+      const handleSave = () => {
+        syncToCloud('studentGrades', studentGrades, profil.tahunAjaran);
+        showToast(`Semua Nilai Akademik Mapel ${selectedMapel} Disimpan!`);
+      };
+
+      const handleReset = () => {
+        showConfirm(`PERINGATAN! Yakin ingin KOSONGKAN/HAPUS seluruh nilai siswa pada mata pelajaran ${selectedMapel}? Data tidak dapat dikembalikan.`, () => {
+          setStudentGrades(prev => {
+            const updated = { ...prev };
+            delete updated[selectedMapel];
+            syncToCloud('studentGrades', updated, profil.tahunAjaran);
+            return updated;
+          });
+          showToast(`Data Nilai ${selectedMapel} Berhasil Dihapus!`);
+        });
+      };
+
+      const generateKeterangan = (s, studentGradesLocal) => {
+        if (!studentGradesLocal || currentMateri.length === 0) return '';
+        let maxVal = -1, minVal = 101, maxIdx = -1, minIdx = -1, countMateri = 0;
+        currentMateri.forEach((mStr, idx) => {
+          const val = studentGradesLocal[`m${idx}`];
+          if (val !== undefined && !isNaN(val)) {
+            if (val > maxVal) { maxVal = val; maxIdx = idx; }
+            if (val < minVal) { minVal = val; minIdx = idx; }
+            countMateri++;
+          }
+        });
+        if (countMateri === 0) return '-';
+
+        const cleanHigh = currentMateri[maxIdx];
+        const cleanLow = currentMateri[minIdx];
+
+        let ket = `Ananda menunjukkan pemahaman terhadap ${cleanHigh}.`;
+        if (minVal < 70) {
+          ket += ` Ananda masih perlu didampingi dan diingatkan tentang ${cleanLow}.`;
+        } else if (maxIdx !== minIdx) {
+          ket += ` Ananda dapat menyebutkan contoh perilaku dan penerapannya dalam ${cleanLow}.`;
+        }
+        return ket;
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-full">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 sm:mb-6 gap-3 sm:gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Input Nilai Formatif & Sumatif</h2>
+              <p className="text-slate-500 font-medium text-[10px] sm:text-sm mt-1">Gunakan mode lanskap atau tutup menu samping di HP.</p>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <select className="p-2 sm:p-3.5 border border-slate-200 rounded-xl font-bold bg-primaryLight text-primaryHover outline-none focus:ring-2 focus:ring-primary flex-1 md:w-64 text-xs sm:text-sm" value={selectedMapel} onChange={e=>setSelectedMapel(e.target.value)}>
+                {mapelList.map(m => <option key={m}>{m}</option>)}
+              </select>
+              <button onClick={handleReset} className="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 sm:px-4 sm:py-3.5 rounded-xl font-bold transition-all flex items-center justify-center shrink-0" title="Hapus Semua Nilai Mapel Ini"><Trash2 /></button>
+            </div>
+          </div>
+
+          {currentMateri.length === 0 ? (
+            <div className="bg-amber-50 text-amber-800 p-4 sm:p-6 rounded-2xl border border-amber-200 font-bold flex items-center gap-3 sm:gap-4 text-xs sm:text-base">
+              <span className="text-xl sm:text-3xl">⚠️</span>
+              <p>Anda belum mengisi Tujuan Pembelajaran untuk <b className="text-amber-900">Kelas {currentRombel} - Mapel {selectedMapel || 'ini'}</b>. Silakan isi di menu <b>Input Deskripsi/TP</b>.</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="bg-red-50 text-red-800 p-4 sm:p-6 rounded-2xl border border-red-200 font-bold text-xs sm:text-base">Silahkan pilih / kunci Rombel Kelas terlebih dahulu di menu "Pilih / Ganti Kelas".</div>
+          ) : (
+            <>
+              <div className="w-full border border-slate-200 rounded-xl sm:rounded-2xl pb-2 table-container">
+                <table className="w-full text-left table-fixed break-words border-collapse text-[8px] sm:text-sm min-w-[800px] md:min-w-full">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="p-1 sm:px-4 sm:py-4 text-center border-r border-slate-200 w-[5%] sm:w-12 leading-tight bg-slate-50" rowSpan={2}>No</th>
+                      <th className="p-1 sm:px-4 sm:py-4 border-r border-slate-200 w-[20%] sm:w-[25%] leading-tight bg-slate-50" rowSpan={2}>NAMA SISWA</th>
+                      <th className="p-1 sm:px-4 sm:py-2 text-center bg-primaryLight border-b border-primary/20 font-extrabold text-primaryHover leading-tight" colSpan={currentMateri.length}>NILAI MATERI / FORMATIF</th>
+                      <th className="p-1 sm:px-2 sm:py-3 text-center bg-blue-50 border-x border-blue-100 w-[6%] sm:w-[5%] leading-tight bg-blue-50" rowSpan={2}>STS</th>
+                      <th className="p-1 sm:px-2 sm:py-3 text-center bg-blue-50 border-r border-blue-100 w-[6%] sm:w-[5%] leading-tight bg-blue-50" rowSpan={2}>SAS</th>
+                      <th className="p-1 sm:px-2 sm:py-3 text-center bg-primary text-white font-extrabold border-r w-[8%] sm:w-[5%] leading-tight" rowSpan={2}>N.A</th>
+                      <th className="p-1 sm:px-4 sm:py-3 w-[25%] sm:w-[30%] leading-tight bg-slate-50" rowSpan={2}>KETERANGAN CAPAIAN</th>
+                    </tr>
+                    <tr>
+                      {currentMateri.map((m, i) => {
+                         return <th key={i} className="p-0.5 sm:px-2 sm:py-2 text-center text-[7px] sm:text-xs font-bold bg-primaryLight/50 border-r border-primary/20" title={m}>{`TP${i+1}`}</th>
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {students.map((s, i) => {
+                      const sg = grades[s.id] || {};
+                      const calcNA = calculateNA(selectedMapel, s.id);
+                      const ket = generateKeterangan(s, sg);
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-1 sm:px-4 sm:py-3 text-center font-bold text-slate-400 border-r border-slate-100">{i+1}</td>
+                          <td className="p-1 sm:px-4 sm:py-3 font-extrabold text-slate-800 border-r border-slate-100 line-clamp-2 leading-tight overflow-hidden">{s.nama}</td>
+                          {currentMateri.map((_, idx) => (
+                            <td key={idx} className="p-0.5 sm:p-1 border-r border-slate-100 bg-primaryLight/10">
+                              <input type="number" min="0" max="100" className="w-full min-w-0 p-0.5 sm:p-1.5 border border-slate-200 rounded sm:rounded-lg text-center text-[9px] sm:text-sm font-bold text-slate-700 focus:ring-1 focus:ring-primary outline-none" value={sg[`m${idx}`] ?? ''} onChange={e=>handleChange(s.id, `m${idx}`, e.target.value)} />
+                            </td>
+                          ))}
+                          <td className="p-0.5 sm:p-1 text-center bg-blue-50/20 border-x border-slate-100">
+                            <input type="number" min="0" max="100" className="w-full min-w-0 p-0.5 sm:p-1.5 border border-slate-200 rounded sm:rounded-lg text-center text-[9px] sm:text-sm font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none" value={sg.sts ?? ''} onChange={e=>handleChange(s.id, 'sts', e.target.value)}/>
+                          </td>
+                          <td className="p-0.5 sm:p-1 text-center bg-blue-50/20 border-r border-slate-100">
+                            <input type="number" min="0" max="100" className="w-full min-w-0 p-0.5 sm:p-1.5 border border-slate-200 rounded sm:rounded-lg text-center text-[9px] sm:text-sm font-bold text-slate-700 focus:ring-1 focus:ring-blue-500 outline-none" value={sg.sas ?? ''} onChange={e=>handleChange(s.id, 'sas', e.target.value)}/>
+                          </td>
+                          <td className="p-1 sm:px-2 sm:py-3 text-center font-black text-primaryHover bg-primaryLight border-r border-primary/20 text-[9px] sm:text-base">{calcNA !== null ? calcNA.toFixed(2) : '0.00'}</td>
+                          <td className="p-1 sm:px-4 sm:py-3 text-[7px] sm:text-xs leading-tight sm:leading-relaxed font-medium text-slate-600 line-clamp-3 sm:line-clamp-none overflow-hidden h-10 sm:h-auto break-words">
+                             {calcNA !== null ? ket : '-'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <button onClick={handleSave} className="mt-4 sm:mt-6 w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md transition-all text-sm sm:text-base"><Save /> Simpan Data Nilai</button>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    function GuruInputAbsensi({ students, absensi, setAbsensi, profil, showToast, showConfirm }) {
+      const updateAbsen = (id, field, val) => {
+        const num = parseInt(val) || 0;
+        setAbsensi(p => ({...p, [id]: {...(p[id]||{sakit:0, izin:0, alfa:0}), [field]: num}}));
+      };
+
+      const handleSave = () => {
+        syncToCloud('absensi', absensi, profil.tahunAjaran);
+        showToast('Data Kehadiran Disimpan!');
+      };
+
+      const handleReset = () => {
+        showConfirm('Yakin ingin KOSONGKAN/HAPUS seluruh Absensi untuk rombel ini?', () => {
+          setAbsensi({});
+          syncToCloud('absensi', {}, profil.tahunAjaran);
+          showToast('Data Absensi berhasil dihapus!');
+        });
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6 gap-3 sm:gap-4">
+            <div>
+               <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Input Data Kehadiran</h2>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+               <button onClick={handleReset} className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl font-bold flex justify-center items-center"><Trash2 /></button>
+               <button onClick={handleSave} className="flex-1 sm:flex-none justify-center bg-primary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-base font-bold flex items-center gap-2 shadow-md"><Save /> Simpan</button>
+            </div>
+          </div>
+          
+          {students.length === 0 ? <p className="font-bold text-red-500 text-xs sm:text-base">Silahkan pilih / kunci Rombel Kelas terlebih dahulu.</p> : (
+            <div className="w-full border border-slate-200 rounded-xl sm:rounded-2xl pb-1 table-container">
+              <table className="w-full text-left table-fixed break-words border-collapse text-[9px] sm:text-sm min-w-[300px]">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
+                  <tr>
+                    <th className="p-1 sm:px-4 sm:py-4 border-r text-center w-8 sm:w-12 leading-tight bg-slate-50">No</th>
+                    <th className="p-1 sm:px-4 sm:py-4 border-r w-[40%] leading-tight bg-slate-50">Nama Siswa</th>
+                    <th className="p-1 sm:py-4 text-center border-r w-[15%] leading-tight bg-slate-50">Sakit</th>
+                    <th className="p-1 sm:py-4 text-center border-r w-[15%] leading-tight bg-slate-50">Izin</th>
+                    <th className="p-1 sm:py-4 text-center border-r w-[15%] leading-tight bg-slate-50">Alfa</th>
+                    <th className="p-1 sm:py-4 text-center border-r bg-primaryLight font-bold text-primaryHover w-[15%] leading-tight">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {students.map((s, i) => {
+                    const a = absensi[s.id] || {sakit:0, izin:0, alfa:0};
+                    const total = (a.sakit||0) + (a.izin||0) + (a.alfa||0);
+                    return (
+                      <tr key={s.id} className="hover:bg-slate-50">
+                        <td className="p-1 sm:px-4 sm:py-4 font-bold text-slate-400 border-r text-center">{i+1}</td>
+                        <td className="p-1 sm:px-4 sm:py-4 font-extrabold text-slate-800 border-r line-clamp-2 overflow-hidden">{s.nama}</td>
+                        <td className="p-0.5 sm:p-2 text-center border-r"><input type="number" min="0" className="w-full min-w-0 p-1 sm:p-2 text-center border rounded sm:rounded-lg font-bold text-[10px] sm:text-sm outline-none focus:border-primary" value={a.sakit||''} onChange={e=>updateAbsen(s.id,'sakit',e.target.value)} /></td>
+                        <td className="p-0.5 sm:p-2 text-center border-r"><input type="number" min="0" className="w-full min-w-0 p-1 sm:p-2 text-center border rounded sm:rounded-lg font-bold text-[10px] sm:text-sm outline-none focus:border-primary" value={a.izin||''} onChange={e=>updateAbsen(s.id,'izin',e.target.value)} /></td>
+                        <td className="p-0.5 sm:p-2 text-center border-r"><input type="number" min="0" className="w-full min-w-0 p-1 sm:p-2 text-center border rounded sm:rounded-lg font-bold text-[10px] sm:text-sm outline-none focus:border-primary" value={a.alfa||''} onChange={e=>updateAbsen(s.id,'alfa',e.target.value)} /></td>
+                        <td className="p-1 sm:px-4 sm:py-4 text-center bg-primaryLight/50 font-black text-primaryHover border-r text-[10px] sm:text-lg">{total}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function GuruInputEkskul({ students, ekskulList, ekskulData, setEkskulData, profil, showToast, showConfirm }) {
+      const updateEkskul = (sId, eksName, field, val) => {
+        setEkskulData(p => ({
+          ...p, [sId]: { ...(p[sId]||{}), [eksName]: { ...((p[sId]||{})[eksName]||{}), [field]: val } }
+        }));
+      };
+
+      const handleSave = () => {
+        syncToCloud('ekskulData', ekskulData, profil.tahunAjaran);
+        showToast('Ekstrakurikuler disimpan!');
+      };
+
+      const handleReset = () => {
+        showConfirm('Yakin ingin KOSONGKAN seluruh data Penilaian Ekstrakurikuler?', () => {
+          setEkskulData({});
+          syncToCloud('ekskulData', {}, profil.tahunAjaran);
+          showToast('Data Ekstrakurikuler berhasil dihapus!');
+        });
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6 gap-3 sm:gap-4">
+            <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Penilaian Ekstrakurikuler</h2>
+            <div className="flex gap-2 w-full sm:w-auto">
+               <button onClick={handleReset} className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center"><Trash2 /></button>
+               <button onClick={handleSave} className="flex-1 sm:flex-none justify-center bg-primary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-base font-bold flex items-center gap-2 shadow-md"><Save /> Simpan</button>
+            </div>
+          </div>
+          
+          {students.length === 0 ? <p className="font-bold text-red-500 text-xs sm:text-base">Silahkan pilih Rombel terlebih dahulu.</p> : (
+            <div className="w-full border border-slate-200 rounded-xl sm:rounded-2xl pb-1 table-container">
+              <table className="w-full text-left table-fixed break-words border-collapse text-[10px] sm:text-sm min-w-[300px]">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                   <tr>
+                     <th className="p-2 sm:px-6 sm:py-4 border-r w-[40%] leading-tight bg-slate-50">NAMA SISWA</th>
+                     {ekskulList.map(e => <th key={e} className="p-1 sm:px-6 sm:py-4 border-r text-center font-bold text-slate-700 leading-tight bg-slate-50">{e}<br/><span className="text-[7px] sm:text-xs font-normal text-slate-500 hidden sm:block">Nilai & Ket</span></th>)}
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                   {students.map((s,i) => (
+                     <tr key={s.id} className="hover:bg-slate-50">
+                       <td className="p-2 sm:px-6 sm:py-4 font-extrabold text-slate-800 border-r leading-tight truncate">{i+1}. {s.nama}</td>
+                       {ekskulList.map(e => {
+                         const ed = (ekskulData[s.id] || {})[e] || {};
+                         return (
+                           <td key={e} className="p-1 sm:px-4 sm:py-3 border-r bg-slate-50/30">
+                             <div className="flex flex-col gap-1">
+                               <select className="w-full p-1 sm:p-2 border border-slate-200 rounded text-xs font-bold outline-none focus:ring-1 focus:ring-primary text-center" value={ed.nilai || '-'} onChange={ev=>updateEkskul(s.id, e, 'nilai', ev.target.value)}>
+                                 <option value="-">-</option><option value="Sangat Baik">Sangat Baik</option><option value="Baik">Baik</option><option value="Cukup">Cukup</option>
+                               </select>
+                               <input type="text" placeholder="Keterangan..." className="w-full p-1 text-xs border border-slate-200 rounded focus:ring-1 focus:ring-primary outline-none" value={ed.ket||''} onChange={ev=>updateEkskul(s.id, e, 'ket', ev.target.value)} />
+                             </div>
+                           </td>
+                         )
+                       })}
+                     </tr>
+                   ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function GuruInputKoku({ students, kokuData, setKokuData, dimensiTarget, setDimensiTarget, currentRombel, profil, showToast, showConfirm }) {
+      const configKey = currentRombel ? `__config_${currentRombel}` : '__config';
+      const savedConfig = kokuData[configKey] || {};
+      const activeConfig = { ...DEFAULT_KOKU_CONFIG, ...savedConfig, dimensi: padArray(savedConfig.dimensi || dimensiTarget || DEFAULT_KOKU_CONFIG.dimensi, 3).slice(0, 3) };
+
+      const handleUpdate = (id, field, val) => setKokuData(p => ({...p, [id]: {...(p[id]||{}), [field]: val}}));
+      const handleConfigUpdate = (field, val) => {
+        setKokuData(p => ({...p, [configKey]: { ...activeConfig, [field]: val }}));
+      };
+      const handleDimensiChange = (index, value) => {
+        const newDimensi = [...activeConfig.dimensi];
+        newDimensi[index] = value;
+        setDimensiTarget(newDimensi);
+        setKokuData(p => ({...p, [configKey]: { ...activeConfig, dimensi: newDimensi }}));
+      };
+
+      const handleSave = () => {
+        const nextData = { ...kokuData, [configKey]: activeConfig };
+        syncToCloud('kokuData', nextData, profil.tahunAjaran);
+        syncToCloud('dimensiTarget', activeConfig.dimensi, profil.tahunAjaran);
+        showToast('Penilaian Kokurikuler disimpan!');
+      };
+
+      const handleReset = () => {
+        showConfirm('Yakin ingin KOSONGKAN seluruh data Penilaian Kokurikuler untuk rombel ini?', () => {
+          setKokuData(prev => {
+            const updated = { ...prev };
+            students.forEach(s => delete updated[s.id]);
+            syncToCloud('kokuData', updated, profil.tahunAjaran);
+            return updated;
+          });
+          showToast('Data Kokurikuler rombel ini berhasil dihapus!');
+        });
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col h-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-8 border-b border-slate-100 pb-4 sm:pb-6 gap-3 sm:gap-4">
+            <div>
+              <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Penilaian Kokurikuler</h2>
+              <p className="text-slate-500 font-medium text-[10px] sm:text-sm">Hasil nilai memakai tingkatan Berkembang, Cakap, dan Mahir sesuai dimensi lulusan.</p>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+               <button onClick={handleReset} className="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 sm:px-4 sm:py-3 rounded-xl sm:rounded-2xl font-bold flex items-center justify-center"><Trash2 /></button>
+               <button onClick={handleSave} className="flex-1 sm:flex-none justify-center bg-primary text-white px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl text-xs sm:text-base font-bold flex items-center gap-2 shadow-md"><Save /> Simpan Kokurikuler</button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 mb-5">
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Tahun Ajaran</label>
+              <input className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-700" value={profil.tahunAjaran || ''} readOnly />
+            </div>
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Semester</label>
+              <input className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-700" value={profil.semester || ''} readOnly />
+            </div>
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Bentuk Kokurikuler</label>
+              <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary" value={activeConfig.bentuk} onChange={e=>handleConfigUpdate('bentuk', e.target.value)}>
+                {KOKU_BENTUK.map(v => <option key={v}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Tema Kokurikuler</label>
+              <input className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary" value={activeConfig.tema || ''} onChange={e=>handleConfigUpdate('tema', e.target.value)} placeholder="Tema kegiatan..." />
+            </div>
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Judul Kegiatan Kokurikuler</label>
+              <input className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary" value={activeConfig.judul || ''} onChange={e=>handleConfigUpdate('judul', e.target.value)} placeholder="Judul kegiatan..." />
+            </div>
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Jenjang</label>
+              <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary" value={activeConfig.jenjang} onChange={e=>handleConfigUpdate('jenjang', e.target.value)}>
+                {KOKU_JENJANG.map(v => <option key={v}>{v}</option>)}
+              </select>
+            </div>
+            {[0,1,2].map(idx => (
+              <div key={idx}>
+                <label className="block text-[10px] sm:text-xs font-bold text-slate-500 mb-1">Dimensi Lulusan {idx+1}</label>
+                <select className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-primaryHover outline-none focus:ring-2 focus:ring-primary" value={activeConfig.dimensi[idx]} onChange={e=>handleDimensiChange(idx, e.target.value)}>
+                  {DIMENSI_P5.map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+
+          {students.length === 0 ? <p className="font-bold text-red-500 text-xs sm:text-base">Silahkan pilih / kunci Rombel Kelas terlebih dahulu.</p> : (
+            <div className="w-full border border-slate-200 rounded-xl sm:rounded-2xl pb-1 table-container">
+              <table className="w-full text-left table-fixed break-words border-collapse text-[8px] sm:text-sm min-w-[760px] md:min-w-full">
+                <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
+                   <tr>
+                     <th className="p-1 sm:p-4 text-center border-r w-8 sm:w-12 bg-slate-50">No</th>
+                     <th className="p-1 sm:p-4 border-r font-extrabold w-[22%] bg-slate-50">NAMA SISWA</th>
+                     {[0,1,2].map(idx => <th key={idx} className="p-1 sm:p-3 text-center bg-primaryLight font-extrabold text-primaryHover border-r w-[16%]">{activeConfig.dimensi[idx]}</th>)}
+                     <th className="p-1 sm:p-4 text-center font-bold w-[30%] bg-slate-50">Catatan / Deskripsi Manual</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                   {students.map((s, i) => {
+                     const row = kokuData[s.id] || { d1: 'Cakap', d2: 'Cakap', d3: 'Cakap', ket: '' };
+                     return (
+                       <tr key={s.id} className="hover:bg-slate-50">
+                         <td className="p-1 sm:p-4 text-center border-r font-bold text-slate-400">{i+1}</td>
+                         <td className="p-1 sm:p-4 font-extrabold text-slate-800 border-r line-clamp-2 overflow-hidden">{s.nama}</td>
+                         {[1,2,3].map(num => (
+                           <td key={num} className="p-0.5 sm:p-3 text-center border-r bg-primaryLight/20">
+                             <select value={row[`d${num}`] || 'Cakap'} onChange={e=>handleUpdate(s.id, `d${num}`, e.target.value)} className="w-full p-1 sm:p-2 border border-slate-200 rounded text-center font-bold text-primaryHover outline-none text-[8px] sm:text-xs">
+                               {KOKU_LEVELS.map(level => <option key={level}>{level}</option>)}
+                             </select>
+                           </td>
+                         ))}
+                         <td className="p-1 sm:p-2 border-r"><textarea rows="2" className="w-full p-1 border border-slate-200 rounded text-[10px] sm:text-xs outline-none focus:ring-1 focus:ring-primary leading-tight" placeholder="Opsional, jika ingin menambah catatan khusus siswa..." value={row.ket||''} onChange={e=>handleUpdate(s.id, 'ket', e.target.value)}></textarea></td>
+                       </tr>
+                     )
+                   })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function GuruLeger({ students, mapelList, calculateNA, profil, waliKelasName, showToast }) {
+      const legerData = students.map((s) => {
+        let total = 0;
+        let scores = {};
+        mapelList.forEach(m => {
+          let na = calculateNA(m, s.id) || 0;
+          scores[m] = na;
+          total += na;
+        });
+        let avg = mapelList.length > 0 ? (total / mapelList.length).toFixed(2) : 0;
+        return { ...s, total, avg, scores };
+      }).sort((a, b) => b.total - a.total); 
+
+      legerData.forEach((s, i) => s.juara = i + 1);
+
+      const htmlPrint = () => {
+        const theadMapel = mapelList.map(m => `<th class="border border-black p-2 text-center text-xs w-10 rotate-180" style="background-color: #0d5c3b !important; color: white !important; -webkit-print-color-adjust: exact; writing-mode: vertical-rl;">${m}</th>`).join('');
+        const tbodyRows = legerData.map((s, i) => {
+          const mapelCols = mapelList.map(m => `<td class="border border-black p-2 text-center font-bold">${s.scores[m] ? s.scores[m].toFixed(2) : '-'}</td>`).join('');
+          return `
+            <tr>
+              <td class="border border-black p-2 text-center">${i+1}</td>
+              <td class="border border-black p-2 font-bold uppercase">${s.nama}</td>
+              <td class="border border-black p-2 text-center">${s.nisn}</td>
+              ${mapelCols}
+              <td class="border border-black p-2 text-center bg-gray-100 font-bold" style="background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact;">${s.total.toFixed(2)}</td>
+              <td class="border border-black p-2 text-center bg-gray-100 font-bold" style="background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact;">${s.avg}</td>
+              <td class="border border-black p-2 text-center font-bold text-[#0d5c3b]">${s.juara}</td>
+            </tr>
+          `;
+        }).join('');
+
+        return `
+          <html><head>
+            <title>Leger Kelas</title>
+            <scr`+`ipt src="https://cdn.tailwindcss.com"></scr`+`ipt>
+            <style>
+              @media print { 
+                body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+                @page { size: landscape; margin: 10mm; }
+              }
+            </style>
+          </head><body class="p-8 font-sans text-sm">
+            <h1 class="text-2xl font-bold uppercase text-center mb-1 text-[#0d5c3b]" style="color: #0d5c3b !important;">LEGER NILAI KELAS</h1>
+            <h2 class="text-lg font-bold uppercase text-center mb-6">${profil.namaSekolah} - T.A ${profil.tahunAjaran} | SEMESTER ${profil.semester}</h2>
+            <table class="w-full border-collapse border border-black mb-8 text-xs">
+              <thead>
+                <tr>
+                  <th class="border border-black p-2 text-center w-8" style="background-color: #0d5c3b !important; color: white !important;">No</th>
+                  <th class="border border-black p-2 text-center" style="background-color: #0d5c3b !important; color: white !important;">Nama Lengkap</th>
+                  <th class="border border-black p-2 text-center w-20" style="background-color: #0d5c3b !important; color: white !important;">NISN</th>
+                  ${theadMapel}
+                  <th class="border border-black p-2 text-center w-16" style="background-color: #0d5c3b !important; color: white !important;">Jumlah Nilai</th>
+                  <th class="border border-black p-2 text-center w-16" style="background-color: #0d5c3b !important; color: white !important;">Rata-rata</th>
+                  <th class="border border-black p-2 text-center w-12" style="background-color: #0d5c3b !important; color: white !important;">Juara</th>
+                </tr>
+              </thead>
+              <tbody>${tbodyRows}</tbody>
+            </table>
+            <div class="flex justify-end pr-10 mt-10">
+              <div class="text-center">
+                 <p style="margin-bottom: 3cm;">Wali Kelas,</p>
+                 <p class="font-bold underline uppercase">${waliKelasName}</p>
+              </div>
+            </div>
+            <scr`+`ipt>window.print();</scr`+`ipt>
+          </body></html>
+        `;
+      };
+
+      const handlePrint = () => {
+        if(students.length === 0) { showToast('Siswa kosong, harap tarik/pilih Rombel terlebih dahulu'); return; }
+        const win = window.open('', '_blank'); win.document.write(htmlPrint()); win.document.close();
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-8 gap-3 sm:gap-4 border-b border-slate-100 pb-4 sm:pb-6">
+            <div>
+              <h2 className="font-extrabold text-lg sm:text-2xl text-slate-800">Leger Nilai Kelas</h2>
+              <p className="text-slate-500 font-medium text-xs sm:text-sm">Rekapitulasi otomatis nilai akhir seluruh mata pelajaran dan pemeringkatan juara.</p>
+            </div>
+            <button onClick={handlePrint} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-4 py-3 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold flex justify-center items-center gap-2 shadow-md transition-all text-sm sm:text-base"><Printer /> Cetak Leger</button>
+          </div>
+
+          <div className="w-full overflow-x-auto border border-slate-200 rounded-xl sm:rounded-2xl pb-1">
+            <table className="w-full text-left table-fixed break-words border-collapse text-[8px] sm:text-sm min-w-[500px]">
+              <thead className="bg-primary text-white">
+                <tr>
+                  <th className="p-1 sm:px-4 sm:py-4 text-center border-r border-primaryHover font-bold w-[5%] sm:w-12 leading-tight">No</th>
+                  <th className="p-1 sm:px-4 sm:py-4 border-r border-primaryHover font-extrabold w-[25%] sm:w-[30%] leading-tight">Nama Siswa</th>
+                  {mapelList.map(m => <th key={m} className="p-0.5 sm:px-2 sm:py-4 text-center border-r border-primaryHover font-bold leading-tight"><div className="w-full truncate text-[6px] sm:text-xs" title={m}>{m.substring(0,3)}</div></th>)}
+                  <th className="p-0.5 sm:px-2 sm:py-4 text-center border-r border-primaryHover bg-black/10 font-bold w-[8%] leading-tight">JML</th>
+                  <th className="p-0.5 sm:px-2 sm:py-4 text-center border-r border-primaryHover bg-black/10 font-bold w-[8%] leading-tight">RATA</th>
+                  <th className="p-0.5 sm:px-2 sm:py-4 text-center font-extrabold w-[8%] leading-tight">JUA</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {legerData.sort((a,b)=>a.nama.localeCompare(b.nama)).map((s, i) => (
+                  <tr key={s.id} className="hover:bg-slate-50">
+                    <td className="p-1 sm:px-4 sm:py-3 text-center text-slate-400 font-bold border-r">{i+1}</td>
+                    <td className="p-1 sm:px-4 sm:py-3 font-bold text-slate-800 border-r line-clamp-2 overflow-hidden leading-tight">{s.nama}</td>
+                    {mapelList.map(m => <td key={m} className="p-0.5 sm:px-2 sm:py-3 text-center font-bold text-slate-700 border-r">{s.scores[m] ? Math.round(s.scores[m]) : '-'}</td>)}
+                    <td className="p-0.5 sm:px-2 sm:py-3 text-center font-black bg-primaryLight/50 border-r">{Math.round(s.total)}</td>
+                    <td className="p-0.5 sm:px-2 sm:py-3 text-center font-bold bg-primaryLight/50 border-r">{s.avg}</td>
+                    <td className="p-0.5 sm:px-2 sm:py-3 text-center font-black text-primary bg-primaryLight/50">{s.juara}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function GuruCetakRapor({ students, mapelList, calculateNA, profil, waliKelasName, waliKelasNip, kokuData, dimensiTarget, ekskulList, ekskulData, absensi, materiGuru, studentGrades, kkmConfig, temaConfig, showToast, allStudents }) {
+      const [selectedStudent, setSelectedStudent] = useState('ALL');
+
+      const extractKecamatan = (kecString) => {
+         if(!kecString) return ''; return kecString.split(',')[0].trim();
+      };
+
+      const getStudentHTML = (s, isLast = false) => {
+        let totalNa = 0;
+        const properName = toProperCase(s.nama);
+        const kelasSiswa = s.rombelSD || '-';
+        const faseSiswa = getFase(kelasSiswa);
+        
+        const getKetMapel = (mapel, sId) => {
+          const studentObj = allStudents.find(x => x.id === sId);
+          const rombel = studentObj ? studentObj.rombelSD : '';
+          const materiKey = rombel ? `${rombel}_${mapel}` : mapel;
+          
+          const materi = (materiGuru[materiKey] || materiGuru[mapel] || []).filter(isTujuanPembelajaran).map(stripMateriPrefix);
+          const scores = (studentGrades[mapel] || {})[sId] || {};
+          if(materi.length === 0) return `-`;
+          
+          let maxVal = -1, minVal = 101, maxIdx = -1, minIdx = -1;
+          materi.forEach((_, idx) => {
+            const val = scores[`m${idx}`];
+            if (val !== undefined && val !== null && !isNaN(val)) {
+              if (val > maxVal) { maxVal = val; maxIdx = idx; }
+              if (val < minVal) { minVal = val; minIdx = idx; }
+            }
+          });
+          if(maxIdx === -1) return `-`;
+          
+          const cleanHigh = materi[maxIdx];
+          const cleanLow = materi[minIdx];
+
+          let ket = `Ananda menunjukkan pemahaman terhadap ${cleanHigh}.`;
+          if (minVal < 70) ket += `<br/>Ananda masih perlu didampingi dan diingatkan tentang ${cleanLow}.`;
+          else if (maxIdx !== minIdx) ket += `<br/>Ananda dapat menyebutkan contoh perilaku dan penerapannya dalam ${cleanLow}.`;
+          return ket;
+        };
+
+        let rows = mapelList.map((m, idx) => {
+          let na = calculateNA(m, s.id);
+          totalNa += (na || 0);
+          let desc = getKetMapel(m, s.id);
+          return `
+          <tr>
+            <td class="border border-black p-2 text-center align-top" style="vertical-align: top;">${idx+1}</td>
+            <td class="border border-black p-2 align-top" style="vertical-align: top;">${m}</td>
+            <td class="border border-black p-2 text-center font-bold text-base align-top" style="vertical-align: top;">${na !== null ? Math.round(na) : '-'}</td>
+            <td class="border border-black p-2 text-sm leading-relaxed text-justify align-top" style="vertical-align: top;">${desc}</td>
+          </tr>
+        `}).join('');
+
+        let rataRata = mapelList.length > 0 ? (totalNa / mapelList.length).toFixed(2) : 0;
+        let avgNum = parseFloat(rataRata);
+        let dynamicCatatan = "";
+        if (avgNum >= 90) dynamicCatatan = `Alhamdulillah, Ananda ${properName} meraih hasil belajar yang sangat memuaskan. Pertahankan prestasimu dan teruslah menjadi inspirasi!`;
+        else if (avgNum >= 80) dynamicCatatan = `Prestasi belajar Ananda ${properName} sudah baik. Tingkatkan lagi fokus dan ketelitianmu agar hasilnya lebih maksimal.`;
+        else if (avgNum >= (kkmConfig?.kkm || 70)) dynamicCatatan = `Ananda ${properName} telah mencapai ketuntasan. Mari tambah lagi waktu dan semangat belajarmu agar prestasimu semakin meningkat.`;
+        else dynamicCatatan = `Ananda ${properName} membutuhkan bimbingan ekstra. Jangan patah semangat, teruslah rajin belajar dan berlatih dengan giat di rumah.`;
+
+        const kokuConfig = { ...DEFAULT_KOKU_CONFIG, ...(kokuData[`__config_${kelasSiswa}`] || kokuData.__config || {}), dimensi: padArray((kokuData[`__config_${kelasSiswa}`] || kokuData.__config || {}).dimensi || dimensiTarget || DEFAULT_KOKU_CONFIG.dimensi, 3).slice(0, 3) };
+        const rowK = kokuData[s.id] || {};
+        const kokuRows = kokuConfig.dimensi.map((dimensi, idx) => {
+          const level = rowK[`d${idx+1}`] || 'Cakap';
+          return `
+            <tr>
+              <td class="border border-black p-2 align-top">${dimensi}</td>
+              <td class="border border-black p-2 text-center font-bold align-top">${level}</td>
+              <td class="border border-black p-2 text-sm leading-relaxed text-justify align-top">${getKokuDescription(dimensi, level, kokuConfig.jenjang)}</td>
+            </tr>
+          `;
+        }).join('');
+        const kokuCatatan = rowK.ket ? `<div class="mt-2 text-sm leading-relaxed text-justify"><b>Catatan:</b> ${rowK.ket}</div>` : '';
+
+        let ekskulRows = ekskulList.map((e, idx) => {
+          let eVal = (ekskulData[s.id]||{})[e]||{};
+          const nilaiEkskul = (eVal.nilai || '').trim();
+          const ketEkskul = (eVal.ket || '').trim();
+          const tidakIkut = /tidak\s+mengikuti/i.test(`${nilaiEkskul} ${ketEkskul}`);
+          const txtKet = (!nilaiEkskul || nilaiEkskul === '-' || tidakIkut) ? '-' : (ketEkskul ? `${nilaiEkskul}, ${ketEkskul}` : nilaiEkskul);
+          return `
+            <tr>
+              <td class="border border-black p-2 text-center align-top">${idx+1}</td>
+              <td class="border border-black p-2 align-top">${e}</td>
+              <td class="border border-black p-2 text-sm align-top">${txtKet}</td>
+            </tr>
+          `;
+        }).join('');
+
+        const a = absensi[s.id] || {sakit:0, izin:0, alfa:0};
+        const formatHari = (val) => (parseInt(val) || 0) > 0 ? `${parseInt(val)} hari` : '-';
+        const cetakKecamatan = extractKecamatan(profil.kecamatan);
+        const headerBg = temaConfig.tableHeaderBg || '#d1d5db';
+        const headerTxt = temaConfig.tableHeaderTxt || '#000000';
+        const opacityVal = (temaConfig.watermarkOpacity || 15) / 100;
+
+        const watermarkTag = temaConfig.useWatermark && profil.logo ? `
+           <img src="${cleanLogoUrl(profil.logo)}" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: ${opacityVal}; width: 60%; object-fit: contain; z-index: -1; pointer-events: none;" />
+        ` : '';
+
+        return `
+          <div style="page-break-after: ${isLast ? 'auto' : 'always'}; padding: 10mm; font-family: Arial, sans-serif; position: relative; font-size: 14px; min-height: 100vh;">
+            ${watermarkTag}
+
+            <h1 style="text-align: center; font-size: 20px; font-weight: 800; letter-spacing: 0; margin: 0 0 18px 0; text-transform: uppercase;">LAPORAN HASIL BELAJAR SISWA</h1>
+            
+            <div class="flex justify-between font-bold mb-6 text-sm relative z-10" style="color: black !important;">
+               <table class="w-[45%]">
+                 <tr><td class="w-28 py-0.5">Nama Murid</td><td class="w-4">:</td><td class="uppercase">${s.nama}</td></tr>
+                 <tr><td class="py-0.5">NIS / NISN</td><td>:</td><td>${formatDash(s.nis)} / ${formatDash(s.nisn)}</td></tr>
+                 <tr><td class="py-0.5">Sekolah</td><td>:</td><td>${profil.namaSekolah}</td></tr>
+                 <tr><td class="align-top py-0.5">Alamat</td><td class="align-top">:</td><td class="font-normal">${profil.alamat}</td></tr>
+               </table>
+               <table class="w-[45%]">
+                 <tr><td class="w-32 py-0.5">Kelas</td><td class="w-4">:</td><td>${kelasSiswa}</td></tr>
+                 <tr><td class="py-0.5">Fase</td><td>:</td><td>${faseSiswa}</td></tr>
+                 <tr><td class="py-0.5">Semester</td><td>:</td><td>${profil.semester}</td></tr>
+                 <tr><td class="py-0.5">Tahun Ajaran</td><td>:</td><td>${profil.tahunAjaran}</td></tr>
+               </table>
+            </div>
+
+            <table class="w-full border-collapse border border-black mb-6 relative z-10" style="background-color: transparent;">
+              <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                <tr>
+                  <th class="border border-black p-2 w-10 text-center font-bold">No.</th>
+                  <th class="border border-black p-2 text-center w-56 font-bold">Mata Pelajaran</th>
+                  <th class="border border-black p-2 text-center w-16 font-bold">Nilai<br/>Akhir</th>
+                  <th class="border border-black p-2 text-center font-bold">Capaian Kompetensi</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+
+            <table class="w-full border-collapse border border-black mb-3 relative z-10">
+               <tr style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                 <th colspan="4" class="border border-black p-2 text-center font-bold">Kokurikuler</th>
+               </tr>
+               <tr>
+                 <td class="border border-black p-2 font-bold w-32">Bentuk</td><td class="border border-black p-2">${formatDash(kokuConfig.bentuk)}</td>
+                 <td class="border border-black p-2 font-bold w-32">Jenjang</td><td class="border border-black p-2">${formatDash(kokuConfig.jenjang)}</td>
+               </tr>
+               <tr>
+                 <td class="border border-black p-2 font-bold">Tema</td><td class="border border-black p-2" colspan="3">${formatDash(kokuConfig.tema)}</td>
+               </tr>
+               <tr>
+                 <td class="border border-black p-2 font-bold">Judul Kegiatan</td><td class="border border-black p-2" colspan="3">${formatDash(kokuConfig.judul)}</td>
+               </tr>
+            </table>
+            <table class="w-full border-collapse border border-black mb-6 relative z-10">
+               <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                  <tr>
+                    <th class="border border-black p-2 text-center font-bold w-48">Dimensi Lulusan</th>
+                    <th class="border border-black p-2 text-center font-bold w-24">Hasil</th>
+                    <th class="border border-black p-2 text-center font-bold">Deskripsi</th>
+                  </tr>
+               </thead>
+               <tbody>${kokuRows}</tbody>
+            </table>
+            ${kokuCatatan}
+
+            <table class="w-full border-collapse border border-black mb-6 relative z-10">
+               <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                  <tr>
+                    <th class="border border-black p-2 w-10 text-center font-bold">No.</th>
+                    <th class="border border-black p-2 text-center w-56 font-bold">Ekstrakurikuler</th>
+                    <th class="border border-black p-2 text-center font-bold">Keterangan</th>
+                  </tr>
+               </thead>
+               <tbody>
+                 ${ekskulRows}
+               </tbody>
+            </table>
+
+            <div class="flex gap-6 mb-6 relative z-10">
+               <table class="w-[45%] border-collapse border border-black h-fit">
+                  <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                     <tr><th colspan="2" class="border border-black p-2 text-center font-bold">Ketidakhadiran</th></tr>
+                  </thead>
+                  <tbody>
+                     <tr><td class="border border-black p-2 pl-4">Sakit</td><td class="border border-black p-2 text-center w-24">${formatHari(a.sakit)}</td></tr>
+                     <tr><td class="border border-black p-2 pl-4">Izin</td><td class="border border-black p-2 text-center">${formatHari(a.izin)}</td></tr>
+                     <tr><td class="border border-black p-2 pl-4">Tanpa Keterangan</td><td class="border border-black p-2 text-center">${formatHari(a.alfa)}</td></tr>
+                  </tbody>
+               </table>
+
+               <table class="w-[55%] border-collapse border border-black flex-1 h-fit">
+                  <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                     <tr><th class="border border-black p-2 text-center font-bold">Catatan Wali Kelas</th></tr>
+                  </thead>
+                  <tbody>
+                     <tr><td class="border border-black p-3 align-top h-[116px] text-sm italic leading-relaxed text-justify">${dynamicCatatan}</td></tr>
+                  </tbody>
+               </table>
+            </div>
+
+            <table class="w-full border-collapse border border-black mt-6 relative z-10">
+               <thead style="background-color: ${headerBg} !important; color: ${headerTxt} !important; -webkit-print-color-adjust: exact;">
+                  <tr><th class="border border-black p-2 text-center font-bold">Tanggapan Orang Tua/Wali Murid</th></tr>
+               </thead>
+               <tbody>
+                  <tr><td class="border border-black p-2 h-24 bg-white"></td></tr>
+               </tbody>
+            </table>
+
+            <!-- Signatures -->
+            <div class="grid grid-cols-3 gap-8 text-sm mt-8 px-4 relative z-10" style="color: black !important;">
+               <div class="text-center">
+                 <p class="font-bold">Orang Tua/Wali Murid</p>
+                 <div style="height: 78px;"></div>
+                 <p class="border-b border-black inline-block w-44">&nbsp;</p>
+               </div>
+               <div class="text-center">
+                 <p class="font-bold">Mengetahui,</p>
+                 <p class="font-bold">Kepala Sekolah</p>
+                 <div style="height: 62px;"></div>
+                 <p class="font-bold underline uppercase">${formatDash(profil.kepalaSekolah)}</p>
+                 <p>NIP. ${formatDash(profil.nip)}</p>
+               </div>
+               <div class="text-center">
+                 <p>${cetakKecamatan}, ${formatDash(profil.tanggalRaport)}</p>
+                 <p class="font-bold">Wali Kelas</p>
+                 <div style="height: 62px;"></div>
+                 <p class="font-bold underline uppercase">${formatDash(waliKelasName)}</p>
+                 <p>NIP. ${formatDash(waliKelasNip)}</p>
+               </div>
+            </div>
+          </div>
+        `;
+      };
+
+      const handlePrint = () => {
+        let toPrint = selectedStudent === 'ALL' ? students : students.filter(s => s.id.toString() === selectedStudent);
+        if(toPrint.length === 0) { showToast('Siswa kosong, harap tarik/pilih Rombel terlebih dahulu'); return; }
+        
+        const combinedHTML = `
+          <html><head>
+            <title>Cetak Rapor Baru</title>
+            <scr`+`ipt src="https://cdn.tailwindcss.com"></scr`+`ipt>
+            <style>
+              .flex { display: flex; }
+              .justify-between { justify-content: space-between; }
+              .justify-end { justify-content: flex-end; }
+              .grid { display: grid; }
+              .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+              .gap-6 { gap: 1.5rem; }
+              .gap-8 { gap: 2rem; }
+              .w-full { width: 100%; }
+              .w-\\[45\\%\\] { width: 45%; }
+              .w-\\[55\\%\\] { width: 55%; }
+              .text-center { text-align: center; }
+              .text-justify { text-align: justify; }
+              .font-bold { font-weight: 700; }
+              .uppercase { text-transform: uppercase; }
+              .underline { text-decoration: underline; }
+              .border { border-width: 1px; }
+              .border-black { border-color: #000; }
+              .inline-block { display: inline-block; }
+              @media print { 
+                 body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color: black; } 
+                 table { page-break-inside: auto; }
+                 tr { page-break-inside: avoid; page-break-after: auto; }
+              }
+            </style>
+          </head><body class="font-sans text-black bg-white">
+            ${toPrint.map((s, idx) => getStudentHTML(s, idx === toPrint.length - 1)).join('')}
+            <scr`+`ipt>window.print();</scr`+`ipt>
+          </body></html>
+        `;
+        const win = window.open('', '_blank'); win.document.open(); win.document.write(combinedHTML); win.document.close();
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-10 rounded-[2rem] border border-slate-100 shadow-sm max-w-2xl mx-auto text-center mt-6 sm:mt-10">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 bg-primaryLight rounded-2xl sm:rounded-[2rem] flex items-center justify-center mx-auto mb-4 sm:mb-6 text-primary"><Printer className="text-2xl sm:text-4xl"/></div>
+          <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800 mb-2">Cetak Dokumen Rapor</h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Dokumen dicetak menggunakan format Rapor Merdeka terbaru.</p>
+          
+          <select className="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 outline-none focus:ring-2 focus:ring-primary font-bold text-slate-700 bg-slate-50 text-xs sm:text-sm" value={selectedStudent} onChange={e=>setSelectedStudent(e.target.value)}>
+            <option value="ALL">Cetak Semua Siswa ({students.length} Siswa)</option>
+            {students.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+          </select>
+          
+          <button onClick={handlePrint} className="bg-primary hover:bg-primaryHover text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg w-full shadow-xl flex items-center justify-center gap-3 transition-all"><ExternalLink /> Buka & Cetak Dokumen</button>
+        </div>
+      );
+    }
+
+    function GuruCetakSampul({ students, profil, showToast }) {
+      const [selectedStudent, setSelectedStudent] = useState('ALL');
+
+      const fv = (val) => {
+        if (!val || val === '0' || String(val).trim() === '') return '-';
+        return val;
+      };
+
+      const getSampulHTML = (s, isLast = false) => {
+        const cetakKecamatan = profil.kecamatan ? profil.kecamatan.split(',')[0].trim() : '';
+        const safeLogo = profil.logo ? cleanLogoUrl(profil.logo).replace(/"/g, '') : '';
+        const nis = fv(s.nis);
+        const nisn = fv(s.nisn);
+
+        return `
+          <!-- SAMPUL 1 (COVER DEPAN) -->
+          <section style="page-break-after: always; padding: 18mm 20mm; font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 255mm; text-align: center; box-sizing: border-box;">
+             ${safeLogo ? `<img src="${safeLogo}" style="width: 180px; height: 180px; margin-bottom: 25px; object-fit: contain;" />` : ''}
+             <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 5px; margin-top: 10px;">LAPORAN</h1>
+             <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">HASIL CAPAIAN PESERTA DIDIK</h2>
+             <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">${profil.namaSekolah}</h2>
+             <p style="font-size: 16px; margin-bottom: 2px;">NPSN : ${fv(profil.npsn)}</p>
+             <p style="font-size: 14px; margin-bottom: 15px; width: 60%; text-align: center;">Alamat : ${fv(profil.alamat)}</p>
+             
+             <p style="font-size: 14px; font-weight: bold; margin-top: 60px; margin-bottom: 10px;">Nama Peserta Didik</p>
+             <div style="border: 2px solid black; padding: 15px 40px; font-size: 20px; font-weight: bold; margin-bottom: 30px; min-width: 400px; text-transform: uppercase;">
+                ${s.nama}
+             </div>
+
+             <p style="font-size: 14px; font-weight: bold; margin-bottom: 10px;">NIS / NISN</p>
+             <div style="border: 2px solid black; padding: 15px 40px; font-size: 20px; font-weight: bold; min-width: 400px;">
+                ${nis} / ${nisn}
+             </div>
+          </section>
+
+          <!-- SAMPUL 2 (IDENTITAS PESERTA DIDIK) -->
+          <section style="page-break-after: ${isLast ? 'auto' : 'always'}; padding: 15mm; font-family: 'Times New Roman', serif; font-size: 13px; position: relative; min-height: 255mm; box-sizing: border-box;">
+             <h2 style="text-align: center; font-style: italic; font-weight: bold; text-decoration: underline; margin-bottom: 20px; font-size: 16px;">IDENTITAS PESERTA DIDIK</h2>
+             
+             <table style="width: 100%; line-height: 2; border-collapse: collapse;">
+                <tr><td style="width: 35%;">1. Nama Peserta Didik</td><td style="width: 2%;">:</td><td style="text-transform: uppercase;"><b>${fv(s.nama)}</b></td></tr>
+                <tr><td>2. Nomor Induk / NISN</td><td>:</td><td>${nis} / ${nisn}</td></tr>
+                <tr><td>3. Tempat, Tanggal Lahir</td><td>:</td><td style="text-transform: uppercase;">${fv(s.tempatTanggalLahir)}</td></tr>
+                <tr><td>4. Jenis Kelamin</td><td>:</td><td>${fv(s.jenisKelamin)}</td></tr>
+                <tr><td>5. Agama</td><td>:</td><td style="text-transform: uppercase;">${fv(s.agama)}</td></tr>
+                <tr><td>6. Pendidikan Sebelumnya</td><td>:</td><td>${fv(s.pendidikanSebelumnya)}</td></tr>
+                <tr><td style="vertical-align: top;">7. Alamat Peserta Didik</td><td style="vertical-align: top;">:</td><td style="text-transform: uppercase;">${fv(s.alamat?.jalan)}, ${fv(s.alamat?.desa)}, KEC. ${fv(s.alamat?.kecamatan)}, ${fv(s.alamat?.kabupaten)}</td></tr>
+                <tr><td colspan="3" style="padding-top: 5px;">8. Nama Orang Tua</td></tr>
+                <tr><td style="padding-left: 20px; font-weight: bold;">a. Ayah</td><td>:</td><td style="text-transform: uppercase;">${fv(s.namaAyah)}</td></tr>
+                <tr><td style="padding-left: 20px; font-weight: bold;">b. Ibu</td><td>:</td><td style="text-transform: uppercase;">${fv(s.namaIbu)}</td></tr>
+                <tr><td colspan="3" style="padding-top: 5px;">9. Pekerjaan Orang Tua</td></tr>
+                <tr><td style="padding-left: 20px; font-weight: bold;">a. Ayah</td><td>:</td><td style="text-transform: uppercase;">${fv(s.pekerjaanAyah)}</td></tr>
+                <tr><td style="padding-left: 20px; font-weight: bold;">b. Ibu</td><td>:</td><td style="text-transform: uppercase;">${fv(s.pekerjaanIbu)}</td></tr>
+             </table>
+
+             <div style="display: flex; justify-content: flex-end; align-items: flex-end; margin-top: 25px; padding-right: 20px;">
+                <div style="width: 250px; text-align: center;">
+                   <p style="margin-bottom: 5px;">${cetakKecamatan}, ${profil.tanggalRaport}</p>
+                   <p style="margin-bottom: 3cm; font-weight: bold;">Kepala Sekolah</p>
+                   <p style="font-weight: bold; text-decoration: underline; text-transform: uppercase;">${profil.kepalaSekolah}</p>
+                </div>
+             </div>
+          </section>
+        `;
+      };
+
+      const handlePrint = () => {
+        let toPrint = selectedStudent === 'ALL' ? students : students.filter(s => s.id.toString() === selectedStudent);
+        if(toPrint.length === 0) { showToast('Siswa kosong, harap tarik/pilih Rombel terlebih dahulu'); return; }
+        
+        const combinedHTML = `
+          <html><head>
+            <title>Cetak Sampul</title>
+            <style>
+              @page { size: A4; margin: 15mm; }
+              @media print { 
+                 body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+              }
+            </style>
+          </head><body style="margin: 0; padding: 0;">
+            ${toPrint.map((s, idx) => getSampulHTML(s, idx === toPrint.length - 1)).join('')}
+            <scr`+`ipt>window.print();</scr`+`ipt>
+          </body></html>
+        `;
+        const win = window.open('', '_blank'); win.document.open(); win.document.write(combinedHTML); win.document.close();
+      };
+
+      return (
+        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-10 rounded-[2rem] border border-slate-100 shadow-sm max-w-2xl mx-auto text-center mt-6 sm:mt-10">
+          <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-50 rounded-2xl sm:rounded-[2rem] flex items-center justify-center mx-auto mb-4 sm:mb-6 text-blue-600"><FileBadge className="text-2xl sm:text-4xl"/></div>
+          <h2 className="font-extrabold text-xl sm:text-2xl text-slate-800 mb-2">Cetak Sampul Rapor</h2>
+          <p className="text-slate-500 font-medium text-xs sm:text-sm mb-6 sm:mb-8">Otomatis mencetak Cover (Sampul 1) dan Identitas Biodata Lengkap (Sampul 2) per siswa.</p>
+          
+          <select className="w-full p-3 sm:p-4 border border-slate-200 rounded-xl sm:rounded-2xl mb-6 sm:mb-8 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700 bg-slate-50 text-xs sm:text-sm" value={selectedStudent} onChange={e=>setSelectedStudent(e.target.value)}>
+            <option value="ALL">Cetak Semua Siswa ({students.length} Siswa)</option>
+            {students.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+          </select>
+          
+          <button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-lg w-full shadow-xl flex items-center justify-center gap-3 transition-all"><ExternalLink /> Buka & Cetak Sampul</button>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
